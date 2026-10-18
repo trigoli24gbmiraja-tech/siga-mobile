@@ -1,0 +1,2132 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>SIGA — Sistema Integrado de Gestão de Alunos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-nav {
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(16px);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .mobile-frame {
+            max-width: 480px;
+            margin: 0 auto;
+            min-height: 100vh;
+            background: #0f172a;
+            position: relative;
+            box-shadow: 0 0 50px rgba(0,0,0,0.7);
+            display: flex;
+            flex-direction: column;
+        }
+        @media (min-width: 640px) {
+            body {
+                background: #020617;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+                padding: 20px 0;
+            }
+            .mobile-frame {
+                height: 90vh;
+                max-height: 880px;
+                border-radius: 40px;
+                border: 8px solid #1e293b;
+                overflow: hidden;
+            }
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 9999px;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+            animation: fadeIn 0.2s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="overflow-x-hidden">
+
+    <div class="mobile-frame">
+
+        <!-- Top Status Bar -->
+        <div class="bg-slate-900 px-6 py-2 flex items-center justify-between text-[11px] text-slate-400 font-medium z-30 shrink-0 border-b border-slate-800/60">
+            <div class="flex items-center gap-2">
+                <span id="cloudStatusDot" class="w-2 h-2 rounded-full bg-amber-400" title="Modo Local"></span>
+                <span class="text-white font-semibold">SIGA Cloud</span>
+                <span id="cloudStatusBadge" class="bg-brand-500/20 text-brand-400 px-1.5 py-0.5 rounded text-[9px] font-bold">v6.0</span>
+            </div>
+            <div id="currentTime" class="tabular-nums">09:41</div>
+        </div>
+
+        <!-- Global Header -->
+        <header class="bg-slate-900/90 border-b border-slate-800 px-4 py-3.5 flex items-center justify-between shrink-0 z-20">
+            <div class="flex items-center gap-3">
+                <div id="roleBadgeIcon" class="w-10 h-10 rounded-2xl bg-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/20 text-white font-bold text-lg transition-all duration-300">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div>
+                    <h1 id="headerTitle" class="text-sm font-bold text-white tracking-wide">Coordenação</h1>
+                    <p id="headerSubtitle" class="text-xs text-slate-400">Painel Administrativo</p>
+                </div>
+            </div>
+
+            <!-- Role Switcher Toggle -->
+            <div class="bg-slate-800/90 p-1 rounded-xl flex items-center border border-slate-700">
+                <button onclick="switchRole('admin')" id="roleAdminBtn" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 bg-brand-600 text-white shadow">
+                    Coordenação
+                </button>
+                <button onclick="switchRole('teacher')" id="roleTeacherBtn" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-all duration-200">
+                    Professor
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto pb-24 relative flex flex-col bg-slate-950">
+
+            <!-- ========================================== -->
+            <!-- VIEW 1: ADMIN / COORDENAÇÃO PANEL -->
+            <!-- ========================================== -->
+            <div id="viewAdmin" class="tab-content active p-4 space-y-4">
+
+                <!-- State A: Admin Login Screen -->
+                <div id="adminAuthScreen" class="space-y-4 py-6">
+                    <div class="text-center space-y-2">
+                        <div class="w-16 h-16 bg-brand-600/20 border border-brand-500/30 rounded-3xl mx-auto flex items-center justify-center text-brand-400 text-2xl shadow-xl">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                        <h2 class="text-base font-bold text-white">Acesso da Coordenação</h2>
+                        <p class="text-xs text-slate-400">Área restrita para gestão de professores, alunos, grades horárias, faltas e calendário escolar.</p>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-3xl space-y-3">
+                        <div class="text-xs font-bold uppercase tracking-wider text-brand-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-lock"></i> Autenticação Administrativa
+                        </div>
+                        <div class="space-y-2.5 text-xs">
+                            <div>
+                                <label class="text-slate-300 block mb-1 font-medium">Senha da Coordenação</label>
+                                <input type="password" id="adminLoginPass" onkeydown="if(event.key==='Enter') handleAdminLogin()" placeholder="Digite a senha administrativa" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-brand-500">
+                            </div>
+                            <button onclick="handleAdminLogin()" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-semibold py-2.5 rounded-xl transition shadow flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-right-to-bracket"></i> Acessar Painel
+                            </button>
+                        </div>
+                        <div class="pt-2 border-t border-slate-800 text-[11px] text-slate-500 flex items-center justify-between">
+                            <span>Protegido por senha</span>
+                            <span id="adminDefaultPassHint" class="text-slate-400">Senha padrão inicial: <strong class="text-brand-400">admin123</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- State B: Admin Logged In Dashboard -->
+                <div id="adminDashboardScreen" class="space-y-4 hidden">
+
+                    <!-- Admin Session Bar -->
+                    <div class="bg-slate-900/90 border border-slate-800 rounded-2xl px-3.5 py-2.5 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                            <span class="text-xs font-semibold text-slate-200">Coordenação Autenticada</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="openAdminPasswordModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg text-[11px] font-medium transition border border-slate-700 flex items-center gap-1">
+                                <i class="fa-solid fa-key text-[10px]"></i> Senha
+                            </button>
+                            <button onclick="adminLogout()" class="bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 px-2.5 py-1 rounded-lg text-[11px] font-medium transition border border-rose-500/30 flex items-center gap-1">
+                                <i class="fa-solid fa-right-from-bracket text-[10px]"></i> Sair
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Metrics -->
+                    <div class="grid grid-cols-4 gap-2">
+                        <div onclick="switchAdminSub('aprovar')" class="bg-slate-900 border border-slate-800 p-2 rounded-xl text-center cursor-pointer hover:border-indigo-500/40 transition">
+                            <div class="text-slate-400 text-[10px] font-medium">Professores</div>
+                            <div id="statProfs" class="text-base font-bold text-indigo-400 mt-0.5">0</div>
+                        </div>
+                        <div onclick="switchAdminSub('cadastros')" class="bg-slate-900 border border-slate-800 p-2 rounded-xl text-center cursor-pointer hover:border-emerald-500/40 transition">
+                            <div class="text-slate-400 text-[10px] font-medium">Alunos</div>
+                            <div id="statAlunos" class="text-base font-bold text-emerald-400 mt-0.5">0</div>
+                        </div>
+                        <div onclick="switchAdminSub('grades')" class="bg-slate-900 border border-slate-800 p-2 rounded-xl text-center cursor-pointer hover:border-brand-500/40 transition">
+                            <div class="text-slate-400 text-[10px] font-medium">Grades</div>
+                            <div id="statGrades" class="text-base font-bold text-white mt-0.5">0</div>
+                        </div>
+                        <div onclick="switchAdminSub('lancamentos')" class="bg-slate-900 border border-slate-800 p-2 rounded-xl text-center cursor-pointer hover:border-rose-500/40 transition">
+                            <div class="text-slate-400 text-[10px] font-medium">Ausências</div>
+                            <div id="statAusencias" class="text-base font-bold text-rose-400 mt-0.5">0</div>
+                        </div>
+                    </div>
+
+                    <!-- Admin Navigation Sub-Tabs -->
+                    <div class="grid grid-cols-5 bg-slate-900 p-1 rounded-xl border border-slate-800 text-[10px] font-medium text-center gap-1">
+                        <button onclick="switchAdminSub('aprovar')" id="subAdminAprovarBtn" class="py-2 rounded-lg bg-slate-800 text-white transition relative">
+                            Profs
+                            <span id="badgePendingCount" class="absolute -top-1 -right-1 bg-rose-500 text-white w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold hidden">0</span>
+                        </button>
+                        <button onclick="switchAdminSub('cadastros')" id="subAdminCadastrosBtn" class="py-2 rounded-lg text-slate-400 hover:text-white transition">Alunos</button>
+                        <button onclick="switchAdminSub('grades')" id="subAdminGradesBtn" class="py-2 rounded-lg text-slate-400 hover:text-white transition">Grades</button>
+                        <button onclick="switchAdminSub('lancamentos')" id="subAdminLancBtn" class="py-2 rounded-lg text-slate-400 hover:text-white transition">Faltas</button>
+                        <button onclick="switchAdminSub('calendario')" id="subAdminCalBtn" class="py-2 rounded-lg text-slate-400 hover:text-white transition">Agenda</button>
+                    </div>
+
+                    <!-- SUB-TAB 0: Aprovação e Gestão de Professores -->
+                    <div id="adminSubAprovar" class="space-y-3">
+                        <div class="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl space-y-2.5">
+                            <h2 class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center justify-between">
+                                <span class="flex items-center gap-2"><i class="fa-solid fa-user-clock"></i> Solicitações Pendentes</span>
+                                <span id="pendingProfsLabelCount" class="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">0</span>
+                            </h2>
+                            <p class="text-[11px] text-slate-400">Novos cadastros aguardando aprovação ou solicitações de recuperação de senha.</p>
+                            <div id="adminPendingProfsList" class="space-y-2 pt-1"></div>
+                        </div>
+
+                        <div class="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h2 class="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
+                                    <i class="fa-solid fa-chalkboard-user"></i> Professores Ativos
+                                </h2>
+                                <button onclick="openTeacherEditModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition shadow">
+                                    <i class="fa-solid fa-plus text-[9px]"></i> Novo Prof.
+                                </button>
+                            </div>
+
+                            <div class="relative">
+                                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                                <input type="text" id="searchAdminProfs" oninput="renderAdmin()" placeholder="Buscar professor por nome ou e-mail..." class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+                            </div>
+
+                            <div id="adminApprovedProfsList" class="space-y-2 pt-1"></div>
+                        </div>
+                    </div>
+
+                    <!-- SUB-TAB 1: Cadastros de Alunos -->
+                    <div id="adminSubCadastros" class="space-y-3 hidden">
+                        <div class="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h2 id="formAlunoTitle" class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                                    <i class="fa-solid fa-user-graduate"></i> Cadastrar Aluno
+                                </h2>
+                                <button id="btnCancelEditAluno" onclick="cancelEditAluno()" class="hidden text-[11px] text-slate-400 hover:text-white">
+                                    Cancelar edição
+                                </button>
+                            </div>
+                            <input type="hidden" id="editAlunoId" value="">
+                            <div class="space-y-2 text-xs">
+                                <input type="text" id="inputNewAlunoNome" placeholder="Nome Completo do Aluno" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500">
+                                <input type="text" id="inputNewAlunoTurma" placeholder="Turma (Ex: 701 ou 8º Ano B)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500">
+                                <button id="btnSubmitAluno" onclick="saveAluno()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded-xl transition shadow">Cadastrar Aluno</button>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Alunos Cadastrados</span>
+                                <span id="adminAlunosFilteredCount" class="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20 font-mono">0 alunos</span>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 text-xs">
+                                <div class="col-span-2 relative">
+                                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                                    <input type="text" id="searchAdminAlunos" oninput="renderAdmin()" placeholder="Buscar aluno..." class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-2.5 py-2 text-white focus:outline-none focus:border-emerald-500">
+                                </div>
+                                <select id="filterAdminAlunosTurma" onchange="renderAdmin()" class="bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-white focus:outline-none focus:border-emerald-500">
+                                    <option value="">Todas Turmas</option>
+                                </select>
+                            </div>
+                            <div id="adminAlunosList" class="space-y-1.5 pt-1"></div>
+                        </div>
+                    </div>
+
+                    <!-- SUB-TAB 2: Grades Horárias -->
+                    <div id="adminSubGrades" class="space-y-3 hidden">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Atribuição de Grades</h2>
+                            <button onclick="openGradeModal()" class="bg-brand-600 hover:bg-brand-500 text-white px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow">
+                                <i class="fa-solid fa-plus text-[10px]"></i> Nova Grade
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2 text-xs">
+                            <div class="col-span-2 relative">
+                                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                                <input type="text" id="searchAdminGrades" oninput="renderAdmin()" placeholder="Buscar prof. ou turma..." class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-8 pr-2.5 py-2 text-white focus:outline-none focus:border-brand-500">
+                            </div>
+                            <select id="filterAdminGradesDia" onchange="renderAdmin()" class="bg-slate-900 border border-slate-800 rounded-xl px-2 py-2 text-white focus:outline-none focus:border-brand-500">
+                                <option value="">Todos os Dias</option>
+                                <option value="Segunda-feira">Segunda</option>
+                                <option value="Terça-feira">Terça</option>
+                                <option value="Quarta-feira">Quarta</option>
+                                <option value="Quinta-feira">Quinta</option>
+                                <option value="Sexta-feira">Sexta</option>
+                            </select>
+                        </div>
+
+                        <div id="adminGradesList" class="space-y-2.5"></div>
+                    </div>
+
+                    <!-- SUB-TAB 3: Lançamento de Faltas -->
+                    <div id="adminSubLanc" class="space-y-3 hidden">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Ausências & Motivos Oficiais</h2>
+                            <button onclick="openAusenciaModal()" class="bg-brand-600 hover:bg-brand-500 text-white px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow">
+                                <i class="fa-solid fa-user-xmark text-[10px]"></i> Registrar Falta
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2 text-xs">
+                            <div class="col-span-2 relative">
+                                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                                <input type="text" id="searchAdminAusencias" oninput="renderAdmin()" placeholder="Buscar aluno, turma ou prof..." class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-8 pr-2.5 py-2 text-white focus:outline-none focus:border-rose-500">
+                            </div>
+                            <select id="filterAdminAusenciasMotivo" onchange="renderAdmin()" class="bg-slate-900 border border-slate-800 rounded-xl px-2 py-2 text-white focus:outline-none focus:border-rose-500">
+                                <option value="">Todos Motivos</option>
+                                <option value="ATMED">ATMED</option>
+                                <option value="DECLRESP">DECLRESP</option>
+                                <option value="DESLOCAMENTO">DESLOCAMENTO</option>
+                                <option value="FALT. FAM">FALT. FAM</option>
+                                <option value="MF">MF</option>
+                                <option value="PEI">PEI</option>
+                                <option value="REL">REL</option>
+                                <option value="OUTROS">OUTROS</option>
+                            </select>
+                        </div>
+
+                        <div id="adminAusenciasList" class="space-y-2.5"></div>
+                    </div>
+
+                    <!-- SUB-TAB 4: Calendário Escolar -->
+                    <div id="adminSubCalendario" class="space-y-3 hidden">
+                        <div class="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl space-y-3">
+                            <div class="flex items-center justify-between">
+                                <div id="formCalTitle" class="flex items-center gap-2 text-purple-400 text-xs font-bold uppercase tracking-wider">
+                                    <i class="fa-solid fa-calendar-days text-base"></i> Calendário Escolar
+                                </div>
+                                <button id="btnCancelEditCal" onclick="cancelEditCalendario()" class="hidden text-[11px] text-slate-400 hover:text-white">
+                                    Cancelar edição
+                                </button>
+                            </div>
+                            <p class="text-[11px] text-slate-400">Cadastre eventos, provas, reuniões e comunicados oficiais para exibição imediata no aplicativo dos professores.</p>
+                            <input type="hidden" id="editCalId" value="">
+                            <div class="space-y-2 text-xs">
+                                <input type="text" id="inputCalTitulo" placeholder="Título do Evento / Prova / Comunicado" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input type="date" id="inputCalData" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500">
+                                    <select id="inputCalTipo" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500">
+                                        <option value="Evento">Evento</option>
+                                        <option value="Prova">Prova</option>
+                                        <option value="Comunicado">Comunicado</option>
+                                        <option value="Reunião">Reunião</option>
+                                    </select>
+                                </div>
+                                <textarea id="inputCalDesc" placeholder="Descrição ou detalhes..." rows="2" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500 resize-none"></textarea>
+                                <button id="btnSubmitCal" onclick="saveCalendarioItem()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold py-2 rounded-xl transition shadow">Publicar no Calendário</button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2 text-xs">
+                            <div class="col-span-2 relative">
+                                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                                <input type="text" id="searchAdminCal" oninput="renderAdmin()" placeholder="Buscar na agenda..." class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-8 pr-2.5 py-2 text-white focus:outline-none focus:border-purple-500">
+                            </div>
+                            <select id="filterAdminCalTipo" onchange="renderAdmin()" class="bg-slate-900 border border-slate-800 rounded-xl px-2 py-2 text-white focus:outline-none focus:border-purple-500">
+                                <option value="">Todos Tipos</option>
+                                <option value="Evento">Evento</option>
+                                <option value="Prova">Prova</option>
+                                <option value="Comunicado">Comunicado</option>
+                                <option value="Reunião">Reunião</option>
+                            </select>
+                        </div>
+
+                        <div id="adminCalendarioList" class="space-y-2.5"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- VIEW 2: TEACHER / PROFESSOR AUTH & PANEL -->
+            <!-- ========================================== -->
+            <div id="viewTeacher" class="tab-content p-4 space-y-4">
+                
+                <!-- State A: Teacher Login / Register Screen -->
+                <div id="teacherAuthScreen" class="space-y-4 py-4">
+                    <div class="text-center space-y-2">
+                        <div class="w-16 h-16 bg-indigo-600/20 border border-indigo-500/30 rounded-3xl mx-auto flex items-center justify-center text-indigo-400 text-2xl shadow-xl">
+                            <i class="fa-solid fa-user-tie"></i>
+                        </div>
+                        <h2 class="text-base font-bold text-white">Portal do Professor</h2>
+                        <p class="text-xs text-slate-400">Faça login com seu e-mail e senha ou cadastre-se para aguardar a aprovação da coordenação.</p>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-3xl space-y-3">
+                        <div id="authModeTitle" class="text-xs font-bold uppercase tracking-wider text-indigo-400">Acessar com E-mail</div>
+                        <div class="space-y-2.5 text-xs">
+                            <div id="fieldNomeContainer" class="hidden">
+                                <label class="text-slate-300 block mb-1 font-medium">Nome Completo</label>
+                                <input type="text" id="authNome" placeholder="Ex: Prof. Carlos Silva" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="text-slate-300 block mb-1 font-medium">E-mail</label>
+                                <input type="email" id="authEmail" placeholder="professor@escola.com" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="text-slate-300 block mb-1 font-medium">Senha</label>
+                                <input type="password" id="authSenha" onkeydown="if(event.key==='Enter') handleTeacherAuthSubmit()" placeholder="Sua senha de acesso" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                            </div>
+                            
+                            <button id="authSubmitBtn" onclick="handleTeacherAuthSubmit()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-xl transition shadow">Entrar no Sistema</button>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-2 border-t border-slate-800 text-[11px]">
+                            <button onclick="toggleAuthMode()" id="authModeToggleLink" class="text-indigo-400 hover:underline">Não tem conta? Cadastre-se</button>
+                            <button onclick="openForgotPasswordModal()" class="text-slate-400 hover:text-white">Esqueci a senha</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- State B: Teacher Logged In Dashboard -->
+                <div id="teacherDashboardScreen" class="space-y-4 hidden">
+                    <div class="bg-gradient-to-r from-indigo-900/60 to-slate-900 border border-indigo-500/30 rounded-2xl p-4 flex flex-col gap-3">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="text-[10px] uppercase font-bold text-indigo-400 tracking-wider">Logado como</span>
+                                <h2 id="teacherLoggedNameLabel" class="text-sm font-bold text-white">Professor</h2>
+                                <p id="teacherLoggedEmailLabel" class="text-[11px] text-slate-400"></p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="openChangePasswordModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition flex items-center gap-1.5 border border-slate-700">
+                                    <i class="fa-solid fa-key"></i> Senha
+                                </button>
+                                <button onclick="teacherLogout()" class="bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition flex items-center gap-1.5 border border-rose-500/30">
+                                    <i class="fa-solid fa-right-from-bracket"></i> Sair
+                                </button>
+                            </div>
+                        </div>
+                        <div class="text-xs text-slate-300 flex items-center gap-2 pt-1 border-t border-indigo-500/20">
+                            <i class="fa-solid fa-circle-info text-indigo-400"></i>
+                            <span>Consulte suas turmas, horários, faltas registradas e o calendário escolar.</span>
+                        </div>
+                    </div>
+
+                    <div class="flex bg-slate-900 p-1 rounded-xl border border-slate-800 text-[11px] font-medium">
+                        <button onclick="switchTeacherSub('grade')" id="subTeacherGradeBtn" class="flex-1 py-2 rounded-lg bg-slate-800 text-white transition text-center">Minha Grade</button>
+                        <button onclick="switchTeacherSub('faltas')" id="subTeacherFaltasBtn" class="flex-1 py-2 rounded-lg text-slate-400 hover:text-white transition text-center">Faltas & Motivos</button>
+                        <button onclick="switchTeacherSub('calendario')" id="subTeacherCalBtn" class="flex-1 py-2 rounded-lg text-slate-400 hover:text-white transition text-center">Calendário</button>
+                    </div>
+
+                    <div id="teacherSubGrade" class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Dias e Horários de Aula</h2>
+                            <span id="teacherGradeCount" class="text-xs font-mono text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-lg border border-indigo-500/20">0 aulas</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-xs">
+                            <div class="col-span-2 relative">
+                                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                                <input type="text" id="searchTeacherGrade" oninput="renderTeacher()" placeholder="Filtrar turma ou horário..." class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-8 pr-2.5 py-2 text-white focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <select id="filterTeacherGradeDia" onchange="renderTeacher()" class="bg-slate-900 border border-slate-800 rounded-xl px-2 py-2 text-white focus:outline-none focus:border-indigo-500">
+                                <option value="">Todos os Dias</option>
+                                <option value="Segunda-feira">Segunda</option>
+                                <option value="Terça-feira">Terça</option>
+                                <option value="Quarta-feira">Quarta</option>
+                                <option value="Quinta-feira">Quinta</option>
+                                <option value="Sexta-feira">Sexta</option>
+                            </select>
+                        </div>
+                        <div id="teacherGradeList" class="space-y-2.5"></div>
+                    </div>
+
+                    <div id="teacherSubFaltas" class="space-y-3 hidden">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Ocorrências & Motivos Oficiais</h2>
+                            <span id="teacherAusenciasCount" class="text-xs font-mono text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-lg border border-rose-500/20">0 registros</span>
+                        </div>
+                        <div class="relative text-xs">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                            <input type="text" id="searchTeacherFaltas" oninput="renderTeacher()" placeholder="Buscar aluno, turma, data ou motivo..." class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-8 pr-3 py-2 text-white focus:outline-none focus:border-rose-500">
+                        </div>
+                        <div id="teacherAusenciasList" class="space-y-2.5"></div>
+                    </div>
+
+                    <div id="teacherSubCalendario" class="space-y-3 hidden">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-xs font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
+                                <i class="fa-solid fa-calendar-days"></i> Calendário, Provas e Comunicados
+                            </h2>
+                            <span id="teacherCalCount" class="text-xs font-mono text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-lg border border-purple-500/20">0 itens</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-xs">
+                            <div class="col-span-2 relative">
+                                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                                <input type="text" id="searchTeacherCal" oninput="renderTeacher()" placeholder="Buscar evento ou comunicado..." class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-8 pr-2.5 py-2 text-white focus:outline-none focus:border-purple-500">
+                            </div>
+                            <select id="filterTeacherCalTipo" onchange="renderTeacher()" class="bg-slate-900 border border-slate-800 rounded-xl px-2 py-2 text-white focus:outline-none focus:border-purple-500">
+                                <option value="">Todos Tipos</option>
+                                <option value="Evento">Evento</option>
+                                <option value="Prova">Prova</option>
+                                <option value="Comunicado">Comunicado</option>
+                                <option value="Reunião">Reunião</option>
+                            </select>
+                        </div>
+                        <div id="teacherCalendarioList" class="space-y-2.5"></div>
+                    </div>
+                </div>
+
+            </div>
+
+        </main>
+
+        <!-- Bottom Mobile Navigation Bar -->
+        <nav class="absolute bottom-0 left-0 right-0 glass-nav h-16 px-6 flex items-center justify-around z-30">
+            <button onclick="switchRole('admin')" id="navCoordBtn" class="flex flex-col items-center gap-1 text-brand-400 transition-all duration-200">
+                <i class="fa-solid fa-shield-halved text-lg"></i>
+                <span class="text-[10px] font-semibold tracking-tight">Coordenação</span>
+            </button>
+            <div class="w-px h-6 bg-slate-800"></div>
+            <button onclick="switchRole('teacher')" id="navProfBtn" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 transition-all duration-200">
+                <i class="fa-solid fa-user-tie text-lg"></i>
+                <span class="text-[10px] font-semibold tracking-tight">Professor</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODALS -->
+    <!-- ========================================== -->
+
+    <!-- Admin Password Change Modal -->
+    <div id="adminPasswordModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-shield-halved text-brand-400"></i> Alterar Senha da Coordenação
+                </h3>
+                <button onclick="closeAdminPasswordModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="text-slate-300 block mb-1 font-medium">Nova Senha Administrativa</label>
+                    <input type="password" id="inputNewAdminPass" placeholder="Mínimo de 4 caracteres" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+                </div>
+                <div>
+                    <label class="text-slate-300 block mb-1 font-medium">Confirmar Nova Senha</label>
+                    <input type="password" id="inputConfirmAdminPass" placeholder="Repita a nova senha" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+                </div>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeAdminPasswordModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl text-xs transition">Cancelar</button>
+                <button onclick="submitAdminPasswordChange()" class="flex-1 bg-brand-600 hover:bg-brand-500 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow">Salvar Senha</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create / Edit Teacher Modal (Admin) -->
+    <div id="teacherEditModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 id="teacherModalTitle" class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-chalkboard-user text-indigo-400"></i> Cadastrar Professor
+                </h3>
+                <button onclick="closeTeacherEditModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <input type="hidden" id="editProfId" value="">
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="text-slate-300 block mb-1 font-medium">Nome do Professor</label>
+                    <input type="text" id="inputProfNome" placeholder="Ex: Prof. Carlos Silva" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="text-slate-300 block mb-1 font-medium">E-mail de Acesso</label>
+                    <input type="email" id="inputProfEmail" placeholder="professor@escola.com" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label id="labelProfSenha" class="text-slate-300 block mb-1 font-medium">Senha de Acesso</label>
+                    <input type="text" id="inputProfSenha" placeholder="Defina uma senha para o professor" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeTeacherEditModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl text-xs transition">Cancelar</button>
+                <button onclick="saveTeacherFromAdmin()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow">Salvar Professor</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grade Modal (Admin - Create & Edit) -->
+    <div id="gradeModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 id="gradeModalTitle" class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-calendar-days text-brand-400"></i> Cadastrar Grade Horária
+                </h3>
+                <button onclick="closeGradeModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <input type="hidden" id="editGradeId" value="">
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="text-slate-300 block mb-1 font-medium">Selecione o Professor</label>
+                    <select id="inputGradeProf" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500"></select>
+                </div>
+                <div>
+                    <label class="text-slate-300 block mb-1 font-medium">Turma / Disciplina</label>
+                    <input type="text" id="inputTurmaNome" placeholder="Ex: 701 ou 8º Ano B - Matemática" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+                </div>
+                <div>
+                    <label class="text-slate-300 block mb-1.5 font-medium">Dias de Aula (Escolha isolada ou cumulativa)</label>
+                    <div class="grid grid-cols-2 gap-2 bg-slate-950 p-2.5 rounded-xl border border-slate-700">
+                        <label class="flex items-center gap-2 text-slate-200 cursor-pointer">
+                            <input type="checkbox" name="diaAula" value="Segunda-feira" class="rounded border-slate-700 bg-slate-900 text-brand-500 focus:ring-0"> Segunda-feira
+                        </label>
+                        <label class="flex items-center gap-2 text-slate-200 cursor-pointer">
+                            <input type="checkbox" name="diaAula" value="Terça-feira" class="rounded border-slate-700 bg-slate-900 text-brand-500 focus:ring-0"> Terça-feira
+                        </label>
+                        <label class="flex items-center gap-2 text-slate-200 cursor-pointer">
+                            <input type="checkbox" name="diaAula" value="Quarta-feira" class="rounded border-slate-700 bg-slate-900 text-brand-500 focus:ring-0"> Quarta-feira
+                        </label>
+                        <label class="flex items-center gap-2 text-slate-200 cursor-pointer">
+                            <input type="checkbox" name="diaAula" value="Quinta-feira" class="rounded border-slate-700 bg-slate-900 text-brand-500 focus:ring-0"> Quinta-feira
+                        </label>
+                        <label class="flex items-center gap-2 text-slate-200 cursor-pointer col-span-2">
+                            <input type="checkbox" name="diaAula" value="Sexta-feira" class="rounded border-slate-700 bg-slate-900 text-brand-500 focus:ring-0"> Sexta-feira
+                        </label>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-slate-300 block mb-1 font-medium">Horário da Aula</label>
+                    <input type="text" id="inputHorarioAula" placeholder="Ex: 07:00 às 12:10" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+                </div>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeGradeModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl text-xs transition">Cancelar</button>
+                <button onclick="saveGrade()" class="flex-1 bg-brand-600 hover:bg-brand-500 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow">Salvar Grade</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Falta / Ausencia Modal (Admin - Create & Edit) -->
+    <div id="ausenciaModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 id="ausenciaModalTitle" class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-user-xmark text-rose-400"></i> Lançar Falta e Motivo Oficial
+                </h3>
+                <button onclick="closeAusenciaModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <input type="hidden" id="editAusenciaId" value="">
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="text-slate-300 block mb-1 font-medium">Selecione o Aluno</label>
+                    <select id="selectModalAluno" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500"></select>
+                </div>
+                <div>
+                    <label class="text-slate-300 block mb-1 font-medium">Data da Falta</label>
+                    <input type="date" id="inputDataFalta" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+                </div>
+                <div>
+                    <label class="text-slate-300 block mb-1 font-medium">Motivo Oficial (Prefeitura / Outros)</label>
+                    <select id="selectMotivoOficial" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-semibold focus:outline-none focus:border-brand-500">
+                        <option value="ATMED">ATMED — Atendimento / Atestado Médico</option>
+                        <option value="DECLRESP">DECLRESP — Declaração de Responsável</option>
+                        <option value="DESLOCAMENTO">DESLOCAMENTO — Deslocamento</option>
+                        <option value="FALT. FAM">FALT. FAM — Falta Familiar</option>
+                        <option value="MF">MF — Motivo de Força Maior</option>
+                        <option value="PEI">PEI — PEI</option>
+                        <option value="REL">REL — Motivo Religioso</option>
+                        <option value="OUTROS">OUTROS — Outros Motivos (Especificar abaixo)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-slate-300 block mb-1 font-medium">Observações / Motivo Personalizado</label>
+                    <input type="text" id="inputObsFalta" placeholder="Descreva o motivo caso seja 'Outros'..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+                </div>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeAusenciaModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl text-xs transition">Cancelar</button>
+                <button onclick="saveAusencia()" class="flex-1 bg-brand-600 hover:bg-brand-500 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow">Salvar Registro</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal (Teacher) -->
+    <div id="changePasswordModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-key text-indigo-400"></i> Alterar Senha de Acesso
+                </h3>
+                <button onclick="closeChangePasswordModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="text-slate-300 block mb-1 font-medium">Nova Senha</label>
+                    <input type="password" id="inputNovaSenha" placeholder="Digite sua nova senha" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="text-slate-300 block mb-1 font-medium">Confirme a Nova Senha</label>
+                    <input type="password" id="inputConfirmaNovaSenha" placeholder="Repita a nova senha" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeChangePasswordModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl text-xs transition">Cancelar</button>
+                <button onclick="submitChangePassword()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow">Atualizar Senha</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal (Teacher) -->
+    <div id="forgotPasswordModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-unlock-keyhole text-indigo-400"></i> Recuperação de Senha
+                </h3>
+                <button onclick="closeForgotPasswordModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <p class="text-slate-400 text-[11px]">Informe seu e-mail cadastrado. A Coordenação receberá um alerta imediato no painel para redefinir sua senha.</p>
+                <div>
+                    <label class="text-slate-300 block mb-1 font-medium">E-mail Cadastrado</label>
+                    <input type="email" id="inputForgotEmail" placeholder="professor@escola.com" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeForgotPasswordModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl text-xs transition">Cancelar</button>
+                <button onclick="submitForgotPassword()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow">Solicitar Redefinição</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-12 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-700 text-white px-4 py-2.5 rounded-2xl shadow-2xl text-xs font-medium z-50 hidden flex items-center gap-2 transition-all max-w-[90vw]">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 shrink-0"></i>
+        <span id="toastMsg">Operação realizada com sucesso!</span>
+    </div>
+
+    <!-- Application Controller Script (Firebase + Multi-Tab LocalSync) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, collection, onSnapshot, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // ============================================================================
+        // CONFIGURAÇÃO DO FIREBASE (COLE AS CREDENCIAIS DO SEU PROJETO FIREBASE AQUI)
+        // ============================================================================
+        const FIREBASE_PROJECT_CONFIG = {
+            apiKey: "",             // Ex: "AIzaSy..."
+            authDomain: "",         // Ex: "seu-projeto.firebaseapp.com"
+            projectId: "",          // Ex: "seu-projeto"
+            storageBucket: "",      // Ex: "seu-projeto.firebasestorage.app"
+            messagingSenderId: "",  // Ex: "123456789"
+            appId: ""               // Ex: "1:123456789:web:abcdef"
+        };
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'siga-default-app';
+        let firebaseConfig = null;
+        try {
+            if (FIREBASE_PROJECT_CONFIG.apiKey && FIREBASE_PROJECT_CONFIG.projectId) {
+                firebaseConfig = FIREBASE_PROJECT_CONFIG;
+            } else if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                firebaseConfig = JSON.parse(__firebase_config);
+            }
+        } catch(e) {
+            firebaseConfig = null;
+        }
+
+        let app = null, db = null, auth = null;
+        const statusDot = document.getElementById('cloudStatusDot');
+        const statusBadge = document.getElementById('cloudStatusBadge');
+
+        if (firebaseConfig && firebaseConfig.apiKey && firebaseConfig.apiKey !== 'demo') {
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
+                statusDot.title = "Sincronizado com Firebase Cloud";
+                statusBadge.innerText = "Cloud Online";
+            } catch(e) {
+                console.warn("Firebase Init Fallback Mode", e);
+            }
+        } else {
+            statusDot.className = "w-2 h-2 rounded-full bg-amber-400";
+            statusDot.title = "Armazenamento Local (Configure FIREBASE_PROJECT_CONFIG para sincronizar na nuvem)";
+            statusBadge.innerText = "v6.0";
+        }
+
+        // Global Application State Data
+        window.appData = {
+            adminPassword: localStorage.getItem('siga_admin_pass') || 'admin123',
+            adminLoggedIn: sessionStorage.getItem('siga_admin_logged') === 'true',
+            professores: JSON.parse(localStorage.getItem('siga_professores') || JSON.stringify([
+                { id: 'p_demo1', nome: 'Prof. Felipe Trigoli', email: 'felipe@escola.com', senha: '123', status: 'approved', resetRequested: false }
+            ])),
+            alunos: JSON.parse(localStorage.getItem('siga_alunos') || JSON.stringify([
+                { id: 'a_demo1', nome: 'Bernardo Brito', turma: '701' }
+            ])),
+            grades: JSON.parse(localStorage.getItem('siga_grades') || JSON.stringify([
+                { id: 'g_demo1', professor: 'Prof. Felipe Trigoli', turma: '701', dias: 'Segunda-feira, Terça-feira', horario: '07:00 às 12:10' }
+            ])),
+            ausencias: JSON.parse(localStorage.getItem('siga_ausencias') || '[]'),
+            calendario: JSON.parse(localStorage.getItem('siga_calendario') || '[]'),
+            activeRole: 'admin',
+            teacherAuthMode: 'login',
+            loggedTeacher: null
+        };
+
+        // Helper: Date Formatter (YYYY-MM-DD -> DD/MM/YYYY)
+        window.formatDateBR = function(dateStr) {
+            if (!dateStr) return '';
+            if (dateStr.includes('/')) return dateStr;
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+            return dateStr;
+        };
+
+        // Helper: Get Day of Week Name in Portuguese from date string (YYYY-MM-DD)
+        window.getDayOfWeekFromDate = function(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return '';
+            const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            const days = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+            return days[d.getDay()];
+        };
+
+        function persistData(key) {
+            localStorage.setItem('siga_' + key, JSON.stringify(window.appData[key]));
+            renderCurrentView();
+        }
+
+        // Listen to storage events for multi-tab / cross-view sync
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'siga_admin_pass' && e.newValue) {
+                window.appData.adminPassword = e.newValue;
+                renderCurrentView();
+            } else if (e.key && e.key.startsWith('siga_')) {
+                const k = e.key.replace('siga_', '');
+                if (Array.isArray(window.appData[k])) {
+                    window.appData[k] = JSON.parse(e.newValue || '[]');
+                    if (k === 'professores' && window.appData.loggedTeacher) {
+                        const updated = window.appData.professores.find(p => p.id === window.appData.loggedTeacher.id);
+                        window.appData.loggedTeacher = updated && updated.status === 'approved' ? updated : null;
+                    }
+                    renderCurrentView();
+                }
+            }
+        });
+
+        // Initialize Firebase Authentication & Firestore real-time listeners
+        async function initCloudSync() {
+            if (!auth || !db) return;
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    if (!user) return;
+                    // Listen to Admin Config (password sync across devices)
+                    onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'admin_config'), (docSnap) => {
+                        if (docSnap.exists() && docSnap.data().adminPassword) {
+                            window.appData.adminPassword = docSnap.data().adminPassword;
+                            localStorage.setItem('siga_admin_pass', window.appData.adminPassword);
+                            renderCurrentView();
+                        }
+                    }, () => {});
+
+                    const collections = ['professores', 'alunos', 'grades', 'ausencias', 'calendario'];
+                    collections.forEach(colName => {
+                        const colRef = collection(db, 'artifacts', appId, 'public', 'data', colName);
+                        onSnapshot(colRef, (snapshot) => {
+                            const items = [];
+                            snapshot.forEach(docSnap => {
+                                items.push({ id: docSnap.id, ...docSnap.data() });
+                            });
+                            window.appData[colName] = items;
+                            localStorage.setItem('siga_' + colName, JSON.stringify(items));
+                            renderCurrentView();
+                        }, (err) => {
+                            console.warn("Firestore sync error on " + colName, err);
+                        });
+                    });
+                });
+            } catch(e) {
+                console.warn("Cloud auth warning", e);
+            }
+        }
+        initCloudSync();
+
+        // Cloud / Local Action Handlers
+        window.saveProfessorCloud = async function(profObj) {
+            const id = profObj.id || ('p_' + Date.now());
+            const existingIdx = window.appData.professores.findIndex(item => item.id === id);
+            let record;
+            if (existingIdx >= 0) {
+                record = { ...window.appData.professores[existingIdx], ...profObj, id };
+                window.appData.professores[existingIdx] = record;
+            } else {
+                record = { id, status: 'pending', resetRequested: false, ...profObj, createdAt: Date.now() };
+                window.appData.professores.push(record);
+            }
+            persistData('professores');
+
+            if (db) {
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'professores', id), record);
+                } catch(e) { console.warn(e); }
+            }
+        };
+
+        window.updateProfessorFieldsCloud = async function(id, fields) {
+            const p = window.appData.professores.find(item => item.id === id);
+            if (p) Object.assign(p, fields);
+            persistData('professores');
+
+            if (db) {
+                try {
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'professores', id), fields);
+                } catch(e) { console.warn(e); }
+            }
+        };
+
+        window.deleteProfessorCloud = async function(id) {
+            window.appData.professores = window.appData.professores.filter(item => item.id !== id);
+            persistData('professores');
+
+            if (db) {
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'professores', id));
+                } catch(e) { console.warn(e); }
+            }
+        };
+
+        window.saveAlunoCloud = async function(alunoObj) {
+            const id = alunoObj.id || ('a_' + Date.now());
+            const existingIdx = window.appData.alunos.findIndex(item => item.id === id);
+            let record;
+            if (existingIdx >= 0) {
+                record = { ...window.appData.alunos[existingIdx], ...alunoObj, id };
+                window.appData.alunos[existingIdx] = record;
+            } else {
+                record = { id, ...alunoObj, createdAt: Date.now() };
+                window.appData.alunos.push(record);
+            }
+            persistData('alunos');
+
+            if (db) {
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'alunos', id), record);
+                } catch(e) { console.warn(e); }
+            }
+        };
+
+        window.deleteAlunoCloud = async function(id) {
+            window.appData.alunos = window.appData.alunos.filter(item => item.id !== id);
+            persistData('alunos');
+
+            if (db) {
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'alunos', id));
+                } catch(e) { console.warn(e); }
+            }
+        };
+
+        window.saveGradeCloud = async function(gradeObj) {
+            const id = gradeObj.id || ('g_' + Date.now());
+            const existingIdx = window.appData.grades.findIndex(item => item.id === id);
+            let record;
+            if (existingIdx >= 0) {
+                record = { ...window.appData.grades[existingIdx], ...gradeObj, id };
+                window.appData.grades[existingIdx] = record;
+            } else {
+                record = { id, ...gradeObj, createdAt: Date.now() };
+                window.appData.grades.push(record);
+            }
+            persistData('grades');
+
+            if (db) {
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'grades', id), record);
+                } catch(e) { console.warn(e); }
+            }
+        };
+
+        window.deleteGradeCloud = async function(id) {
+            window.appData.grades = window.appData.grades.filter(item => item.id !== id);
+            persistData('grades');
+
+            if (db) {
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'grades', id));
+                } catch(e) { console.warn(e); }
+            }
+        };
+
+        window.saveAusenciaCloud = async function(ausenciaObj) {
+            const id = ausenciaObj.id || ('au_' + Date.now());
+            const existingIdx = window.appData.ausencias.findIndex(item => item.id === id);
+            let record;
+            if (existingIdx >= 0) {
+                record = { ...window.appData.ausencias[existingIdx], ...ausenciaObj, id };
+                window.appData.ausencias[existingIdx] = record;
+            } else {
+                record = { id, ...ausenciaObj, createdAt: Date.now() };
+                window.appData.ausencias.push(record);
+            }
+            persistData('ausencias');
+
+            if (db) {
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'ausencias', id), record);
+                } catch(e) { console.warn(e); }
+            }
+        };
+
+        window.deleteAusenciaCloud = async function(id) {
+            window.appData.ausencias = window.appData.ausencias.filter(item => item.id !== id);
+            persistData('ausencias');
+
+            if (db) {
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'ausencias', id));
+                } catch(e) { console.warn(e); }
+            }
+        };
+
+        window.saveCalendarioCloud = async function(calObj) {
+            const id = calObj.id || ('c_' + Date.now());
+            const existingIdx = window.appData.calendario.findIndex(item => item.id === id);
+            let record;
+            if (existingIdx >= 0) {
+                record = { ...window.appData.calendario[existingIdx], ...calObj, id };
+                window.appData.calendario[existingIdx] = record;
+            } else {
+                record = { id, ...calObj, createdAt: Date.now() };
+                window.appData.calendario.push(record);
+            }
+            persistData('calendario');
+
+            if (db) {
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'calendario', id), record);
+                } catch(e) { console.warn(e); }
+            }
+        };
+
+        window.deleteCalendarioCloud = async function(id) {
+            window.appData.calendario = window.appData.calendario.filter(item => item.id !== id);
+            persistData('calendario');
+
+            if (db) {
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'calendario', id));
+                } catch(e) { console.warn(e); }
+            }
+        };
+
+        // Clock
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('currentTime').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        function renderCurrentView() {
+            if (window.appData.activeRole === 'admin') {
+                renderAdmin();
+            } else {
+                renderTeacher();
+            }
+        }
+
+        // --- Admin Authentication ---
+        window.handleAdminLogin = function() {
+            const passInput = document.getElementById('adminLoginPass');
+            const pass = passInput.value.trim();
+            if (pass === window.appData.adminPassword) {
+                window.appData.adminLoggedIn = true;
+                sessionStorage.setItem('siga_admin_logged', 'true');
+                passInput.value = '';
+                showToast("Acesso liberado ao Painel da Coordenação!");
+                renderAdmin();
+            } else {
+                showToast("Senha da coordenação incorreta!", "error");
+            }
+        };
+
+        window.adminLogout = function() {
+            window.appData.adminLoggedIn = false;
+            sessionStorage.removeItem('siga_admin_logged');
+            showToast("Sessão da coordenação encerrada.");
+            renderAdmin();
+        };
+
+        window.openAdminPasswordModal = function() {
+            document.getElementById('inputNewAdminPass').value = '';
+            document.getElementById('inputConfirmAdminPass').value = '';
+            document.getElementById('adminPasswordModal').classList.remove('hidden');
+        };
+
+        window.closeAdminPasswordModal = function() {
+            document.getElementById('adminPasswordModal').classList.add('hidden');
+        };
+
+        window.submitAdminPasswordChange = async function() {
+            const p1 = document.getElementById('inputNewAdminPass').value.trim();
+            const p2 = document.getElementById('inputConfirmAdminPass').value.trim();
+            if (!p1 || p1.length < 4) {
+                showToast("A senha deve ter pelo menos 4 caracteres!", "error");
+                return;
+            }
+            if (p1 !== p2) {
+                showToast("As senhas não coincidem!", "error");
+                return;
+            }
+            window.appData.adminPassword = p1;
+            localStorage.setItem('siga_admin_pass', p1);
+            if (db) {
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'admin_config'), { adminPassword: p1, updatedAt: Date.now() });
+                } catch(e) { console.warn(e); }
+            }
+            closeAdminPasswordModal();
+            showToast("Senha da coordenação atualizada com sucesso!");
+            renderAdmin();
+        };
+
+        // Role Switching
+        window.switchRole = function(role) {
+            window.appData.activeRole = role;
+            const viewAdmin = document.getElementById('viewAdmin');
+            const viewTeacher = document.getElementById('viewTeacher');
+            const roleAdminBtn = document.getElementById('roleAdminBtn');
+            const roleTeacherBtn = document.getElementById('roleTeacherBtn');
+            const navCoordBtn = document.getElementById('navCoordBtn');
+            const navProfBtn = document.getElementById('navProfBtn');
+            const roleBadgeIcon = document.getElementById('roleBadgeIcon');
+            const headerTitle = document.getElementById('headerTitle');
+            const headerSubtitle = document.getElementById('headerSubtitle');
+
+            if (role === 'admin') {
+                viewAdmin.classList.add('active');
+                viewTeacher.classList.remove('active');
+                roleAdminBtn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-600 text-white shadow";
+                roleTeacherBtn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white";
+                navCoordBtn.className = "flex flex-col items-center gap-1 text-brand-400 transition-all duration-200";
+                navProfBtn.className = "flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 transition-all duration-200";
+                roleBadgeIcon.className = "w-10 h-10 rounded-2xl bg-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/20 text-white font-bold text-lg";
+                roleBadgeIcon.innerHTML = '<i class="fa-solid fa-shield-halved"></i>';
+                headerTitle.innerText = "Coordenação";
+                headerSubtitle.innerText = "Painel Administrativo";
+                renderAdmin();
+            } else {
+                viewTeacher.classList.add('active');
+                viewAdmin.classList.remove('active');
+                roleTeacherBtn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white shadow";
+                roleAdminBtn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white";
+                navProfBtn.className = "flex flex-col items-center gap-1 text-indigo-400 transition-all duration-200";
+                navCoordBtn.className = "flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 transition-all duration-200";
+                roleBadgeIcon.className = "w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white font-bold text-lg";
+                roleBadgeIcon.innerHTML = '<i class="fa-solid fa-user-tie"></i>';
+                headerTitle.innerText = "Professor";
+                headerSubtitle.innerText = "Portal de Consulta";
+                renderTeacher();
+            }
+        };
+
+        window.switchAdminSub = function(sub) {
+            const s0 = document.getElementById('adminSubAprovar');
+            const s1 = document.getElementById('adminSubCadastros');
+            const s2 = document.getElementById('adminSubGrades');
+            const s3 = document.getElementById('adminSubLanc');
+            const s4 = document.getElementById('adminSubCalendario');
+            const b0 = document.getElementById('subAdminAprovarBtn');
+            const b1 = document.getElementById('subAdminCadastrosBtn');
+            const b2 = document.getElementById('subAdminGradesBtn');
+            const b3 = document.getElementById('subAdminLancBtn');
+            const b4 = document.getElementById('subAdminCalBtn');
+
+            s0.classList.add('hidden'); s1.classList.add('hidden'); s2.classList.add('hidden'); s3.classList.add('hidden'); s4.classList.add('hidden');
+            b0.className = "py-2 rounded-lg text-slate-400 hover:text-white transition relative";
+            b1.className = "py-2 rounded-lg text-slate-400 hover:text-white transition";
+            b2.className = "py-2 rounded-lg text-slate-400 hover:text-white transition";
+            b3.className = "py-2 rounded-lg text-slate-400 hover:text-white transition";
+            b4.className = "py-2 rounded-lg text-slate-400 hover:text-white transition";
+
+            if (sub === 'aprovar') {
+                s0.classList.remove('hidden');
+                b0.className = "py-2 rounded-lg bg-slate-800 text-white transition relative";
+            } else if (sub === 'cadastros') {
+                s1.classList.remove('hidden');
+                b1.className = "py-2 rounded-lg bg-slate-800 text-white transition";
+            } else if (sub === 'grades') {
+                s2.classList.remove('hidden');
+                b2.className = "py-2 rounded-lg bg-slate-800 text-white transition";
+            } else if (sub === 'lancamentos') {
+                s3.classList.remove('hidden');
+                b3.className = "py-2 rounded-lg bg-slate-800 text-white transition";
+            } else {
+                s4.classList.remove('hidden');
+                b4.className = "py-2 rounded-lg bg-slate-800 text-white transition";
+            }
+        };
+
+        window.switchTeacherSub = function(sub) {
+            const subGrade = document.getElementById('teacherSubGrade');
+            const subFaltas = document.getElementById('teacherSubFaltas');
+            const subCal = document.getElementById('teacherSubCalendario');
+            const btnG = document.getElementById('subTeacherGradeBtn');
+            const btnF = document.getElementById('subTeacherFaltasBtn');
+            const btnC = document.getElementById('subTeacherCalBtn');
+
+            subGrade.classList.add('hidden');
+            subFaltas.classList.add('hidden');
+            subCal.classList.add('hidden');
+            btnG.className = "flex-1 py-2 rounded-lg text-slate-400 hover:text-white transition text-center";
+            btnF.className = "flex-1 py-2 rounded-lg text-slate-400 hover:text-white transition text-center";
+            btnC.className = "flex-1 py-2 rounded-lg text-slate-400 hover:text-white transition text-center";
+
+            if (sub === 'grade') {
+                subGrade.classList.remove('hidden');
+                btnG.className = "flex-1 py-2 rounded-lg bg-slate-800 text-white transition text-center";
+            } else if (sub === 'faltas') {
+                subFaltas.classList.remove('hidden');
+                btnF.className = "flex-1 py-2 rounded-lg bg-slate-800 text-white transition text-center";
+            } else {
+                subCal.classList.remove('hidden');
+                btnC.className = "flex-1 py-2 rounded-lg bg-slate-800 text-white transition text-center";
+            }
+        };
+
+        // --- Render Admin ---
+        window.renderAdmin = function() {
+            const authScreen = document.getElementById('adminAuthScreen');
+            const dashScreen = document.getElementById('adminDashboardScreen');
+            const defaultHint = document.getElementById('adminDefaultPassHint');
+
+            if (defaultHint) {
+                defaultHint.classList.toggle('hidden', window.appData.adminPassword !== 'admin123');
+            }
+
+            if (!window.appData.adminLoggedIn) {
+                authScreen.classList.remove('hidden');
+                dashScreen.classList.add('hidden');
+                return;
+            }
+            authScreen.classList.add('hidden');
+            dashScreen.classList.remove('hidden');
+
+            const pendingProfs = window.appData.professores.filter(p => !p.status || p.status === 'pending' || p.resetRequested);
+            const approvedProfs = window.appData.professores.filter(p => p.status === 'approved');
+
+            document.getElementById('statProfs').innerText = approvedProfs.length;
+            document.getElementById('statAlunos').innerText = window.appData.alunos.length;
+            document.getElementById('statGrades').innerText = window.appData.grades.length;
+            document.getElementById('statAusencias').innerText = window.appData.ausencias.length;
+
+            const badge = document.getElementById('badgePendingCount');
+            const pendingCountLabel = document.getElementById('pendingProfsLabelCount');
+            if (pendingCountLabel) pendingCountLabel.innerText = pendingProfs.length;
+
+            if (pendingProfs.length > 0) {
+                badge.innerText = pendingProfs.length;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+
+            // 1. Pending Approvals & Password Reset Requests List
+            const pendingList = document.getElementById('adminPendingProfsList');
+            if (pendingProfs.length === 0) {
+                pendingList.innerHTML = `<div class="text-slate-500 text-[11px] py-2 text-center">Nenhuma solicitação pendente no momento.</div>`;
+            } else {
+                pendingList.innerHTML = pendingProfs.map(p => {
+                    const isResetOnly = p.status === 'approved' && p.resetRequested;
+                    return `
+                        <div class="flex items-center justify-between text-xs bg-slate-950 p-2.5 rounded-xl border ${isResetOnly ? 'border-amber-500/40' : 'border-slate-800'}">
+                            <div class="space-y-0.5">
+                                <div class="flex items-center gap-1.5">
+                                    <strong class="text-white">${p.nome}</strong>
+                                    ${isResetOnly
+                                        ? `<span class="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-bold">Nova Senha</span>`
+                                        : `<span class="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded font-bold">Novo Cadastro</span>`
+                                    }
+                                </div>
+                                <div class="text-[10px] text-slate-400">${p.email}</div>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                ${isResetOnly
+                                    ? `<button onclick="openTeacherEditModal('${p.id}')" class="bg-amber-600 hover:bg-amber-500 text-white px-2.5 py-1 rounded-lg text-[11px] font-semibold transition">Redefinir Senha</button>`
+                                    : `<button onclick="approveTeacher('${p.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-lg text-[11px] font-semibold transition">Aprovar</button>
+                                       <button onclick="rejectTeacher('${p.id}')" class="bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 px-2 py-1 rounded-lg text-[11px] transition" title="Recusar"><i class="fa-solid fa-trash-can"></i></button>`
+                                }
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // 2. Approved / Active Professors List with Search
+            const searchProfQuery = (document.getElementById('searchAdminProfs')?.value || '').trim().toLowerCase();
+            const filteredApprovedProfs = approvedProfs.filter(p =>
+                p.nome.toLowerCase().includes(searchProfQuery) ||
+                p.email.toLowerCase().includes(searchProfQuery)
+            );
+            const approvedList = document.getElementById('adminApprovedProfsList');
+            if (filteredApprovedProfs.length === 0) {
+                approvedList.innerHTML = `<div class="text-slate-500 text-[11px] py-3 text-center">Nenhum professor ativo encontrado.</div>`;
+            } else {
+                approvedList.innerHTML = filteredApprovedProfs.map(p => {
+                    const gradesCount = window.appData.grades.filter(g => g.professor === p.nome).length;
+                    return `
+                        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between gap-2">
+                            <div class="space-y-0.5 min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <strong class="text-white text-xs truncate">${p.nome}</strong>
+                                    <span class="text-[10px] bg-indigo-500/15 text-indigo-300 px-1.5 py-0.5 rounded font-mono shrink-0">${gradesCount} grade(s)</span>
+                                </div>
+                                <div class="text-[10px] text-slate-400 truncate">${p.email}</div>
+                            </div>
+                            <div class="flex items-center gap-1 shrink-0">
+                                <button onclick="openTeacherEditModal('${p.id}')" class="text-slate-300 hover:text-indigo-400 bg-slate-900 hover:bg-slate-800 p-1.5 rounded-lg border border-slate-800 transition text-xs" title="Editar / Redefinir Senha">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                <button onclick="rejectTeacher('${p.id}')" class="text-slate-400 hover:text-rose-400 bg-slate-900 hover:bg-slate-800 p-1.5 rounded-lg border border-slate-800 transition text-xs" title="Excluir Professor">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // 3. Populate Turmas Filter & Render Alunos List
+            const turmaSelect = document.getElementById('filterAdminAlunosTurma');
+            if (turmaSelect) {
+                const currentTurmaFilter = turmaSelect.value;
+                const uniqueTurmas = [...new Set(window.appData.alunos.map(a => a.turma.trim()))].filter(Boolean).sort();
+                turmaSelect.innerHTML = `<option value="">Todas Turmas</option>` +
+                    uniqueTurmas.map(t => `<option value="${t}" ${t === currentTurmaFilter ? 'selected' : ''}>Turma ${t}</option>`).join('');
+            }
+
+            const searchAlunoQuery = (document.getElementById('searchAdminAlunos')?.value || '').trim().toLowerCase();
+            const selectedTurmaFilter = document.getElementById('filterAdminAlunosTurma')?.value || '';
+            const filteredAlunos = window.appData.alunos.filter(a => {
+                const matchSearch = a.nome.toLowerCase().includes(searchAlunoQuery) || a.turma.toLowerCase().includes(searchAlunoQuery);
+                const matchTurma = !selectedTurmaFilter || a.turma === selectedTurmaFilter;
+                return matchSearch && matchTurma;
+            });
+
+            document.getElementById('adminAlunosFilteredCount').innerText = `${filteredAlunos.length} aluno(s)`;
+            const alunosList = document.getElementById('adminAlunosList');
+            if (filteredAlunos.length === 0) {
+                alunosList.innerHTML = `<div class="text-slate-500 text-[11px] py-3 text-center">Nenhum aluno encontrado.</div>`;
+            } else {
+                alunosList.innerHTML = filteredAlunos.map(a => `
+                    <div class="flex items-center justify-between text-xs bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                        <div>
+                            <strong class="text-white">${a.nome}</strong>
+                            <span class="ml-1.5 text-[10px] bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-md font-semibold">Turma ${a.turma}</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <button onclick="startEditAluno('${a.id}')" class="text-slate-300 hover:text-emerald-400 p-1.5 rounded-lg bg-slate-900 border border-slate-800" title="Editar Aluno">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button onclick="deleteAluno('${a.id}')" class="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg bg-slate-900 border border-slate-800" title="Remover Aluno">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // 4. Grades List with Search & Day Filter
+            const searchGradeQuery = (document.getElementById('searchAdminGrades')?.value || '').trim().toLowerCase();
+            const selectedGradeDia = document.getElementById('filterAdminGradesDia')?.value || '';
+            const filteredGrades = window.appData.grades.filter(g => {
+                const matchSearch = g.professor.toLowerCase().includes(searchGradeQuery) ||
+                                    g.turma.toLowerCase().includes(searchGradeQuery) ||
+                                    (g.horario || '').toLowerCase().includes(searchGradeQuery);
+                const matchDia = !selectedGradeDia || (g.dias && g.dias.toLowerCase().includes(selectedGradeDia.toLowerCase()));
+                return matchSearch && matchDia;
+            });
+
+            const gradesList = document.getElementById('adminGradesList');
+            if (filteredGrades.length === 0) {
+                gradesList.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs bg-slate-900/50 rounded-2xl border border-slate-900">Nenhuma grade encontrada.</div>`;
+            } else {
+                gradesList.innerHTML = filteredGrades.map(g => `
+                    <div class="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl flex items-center justify-between gap-2">
+                        <div class="space-y-1 min-w-0">
+                            <div class="font-bold text-white text-sm truncate">${g.professor}</div>
+                            <div class="text-xs text-brand-400 font-semibold">${g.turma}</div>
+                            <div class="text-[11px] text-slate-400 flex flex-wrap items-center gap-x-3 gap-y-1">
+                                <span><i class="fa-solid fa-calendar-days mr-1 text-slate-500"></i>${g.dias}</span>
+                                <span><i class="fa-solid fa-clock mr-1 text-slate-500"></i>${g.horario}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button onclick="openGradeModal('${g.id}')" class="text-slate-300 hover:text-brand-400 bg-slate-950 p-2 rounded-xl border border-slate-800 transition text-xs" title="Editar Grade">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button onclick="deleteGrade('${g.id}')" class="text-slate-400 hover:text-rose-400 bg-slate-950 p-2 rounded-xl border border-slate-800 transition text-xs" title="Excluir Grade">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // 5. Ausencias List with Search & Motivo Filter
+            const searchAusQuery = (document.getElementById('searchAdminAusencias')?.value || '').trim().toLowerCase();
+            const selectedMotivo = document.getElementById('filterAdminAusenciasMotivo')?.value || '';
+            const filteredAusencias = window.appData.ausencias.filter(a => {
+                const profsStr = (a.professores || []).join(' ').toLowerCase();
+                const dateBR = formatDateBR(a.data).toLowerCase();
+                const matchSearch = a.aluno.toLowerCase().includes(searchAusQuery) ||
+                                    a.turma.toLowerCase().includes(searchAusQuery) ||
+                                    profsStr.includes(searchAusQuery) ||
+                                    dateBR.includes(searchAusQuery);
+                const matchMotivo = !selectedMotivo || a.motivo === selectedMotivo;
+                return matchSearch && matchMotivo;
+            });
+
+            const ausenciasList = document.getElementById('adminAusenciasList');
+            if (filteredAusencias.length === 0) {
+                ausenciasList.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs bg-slate-900/50 rounded-2xl border border-slate-900">Nenhuma ausência encontrada.</div>`;
+            } else {
+                ausenciasList.innerHTML = filteredAusencias.map(a => `
+                    <div class="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-white text-xs">${a.aluno}</span>
+                            <span class="text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-md font-bold">${a.motivo}</span>
+                        </div>
+                        <div class="text-[11px] text-slate-400 flex items-center justify-between gap-2">
+                            <span class="truncate">Prof(s): <strong class="text-slate-200">${a.professores && a.professores.length > 0 ? a.professores.join(', ') : 'Nenhum na grade'}</strong></span>
+                            <span class="shrink-0">Data: <strong class="text-slate-200">${formatDateBR(a.data)}</strong></span>
+                        </div>
+                        <div class="text-[11px] bg-slate-950 p-2 rounded-xl text-slate-300 border border-slate-800/80">
+                            Turma: <strong>${a.turma}</strong> ${a.obs ? '— ' + a.obs : ''}
+                        </div>
+                        <div class="flex justify-end gap-2 pt-1">
+                            <button onclick="openAusenciaModal('${a.id}')" class="text-[11px] text-indigo-400 hover:underline flex items-center gap-1">
+                                <i class="fa-solid fa-pen-to-square"></i> Editar
+                            </button>
+                            <button onclick="deleteAusencia('${a.id}')" class="text-[11px] text-rose-400 hover:underline flex items-center gap-1">
+                                <i class="fa-solid fa-trash-can"></i> Remover
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // 6. Calendario List with Search & Tipo Filter
+            const searchCalQuery = (document.getElementById('searchAdminCal')?.value || '').trim().toLowerCase();
+            const selectedCalTipo = document.getElementById('filterAdminCalTipo')?.value || '';
+            const filteredCal = window.appData.calendario.filter(c => {
+                const dateBR = formatDateBR(c.data).toLowerCase();
+                const matchSearch = c.titulo.toLowerCase().includes(searchCalQuery) ||
+                                    (c.desc || '').toLowerCase().includes(searchCalQuery) ||
+                                    dateBR.includes(searchCalQuery);
+                const matchTipo = !selectedCalTipo || c.tipo === selectedCalTipo;
+                return matchSearch && matchTipo;
+            });
+
+            const calList = document.getElementById('adminCalendarioList');
+            if (filteredCal.length === 0) {
+                calList.innerHTML = `<div class="text-center py-6 text-slate-500 text-xs bg-slate-900/50 rounded-2xl border border-slate-900">Nenhum evento encontrado no calendário.</div>`;
+            } else {
+                calList.innerHTML = filteredCal.map(c => `
+                    <div class="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-white text-xs">${c.titulo}</span>
+                            <span class="text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded-md font-bold">${c.tipo}</span>
+                        </div>
+                        <div class="text-[11px] text-slate-400">
+                            Data: <strong class="text-slate-200">${formatDateBR(c.data)}</strong>
+                        </div>
+                        ${c.desc ? `<div class="text-[11px] bg-slate-950 p-2 rounded-xl text-slate-300 border border-slate-800">${c.desc}</div>` : ''}
+                        <div class="flex justify-end gap-3 pt-1">
+                            <button onclick="startEditCalendario('${c.id}')" class="text-[11px] text-purple-400 hover:underline flex items-center gap-1">
+                                <i class="fa-solid fa-pen-to-square"></i> Editar
+                            </button>
+                            <button onclick="deleteCalendario('${c.id}')" class="text-[11px] text-rose-400 hover:underline flex items-center gap-1">
+                                <i class="fa-solid fa-trash-can"></i> Remover
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        };
+
+        // --- Admin Professor Actions ---
+        window.approveTeacher = async function(id) {
+            await window.updateProfessorFieldsCloud(id, { status: 'approved', resetRequested: false });
+            showToast("Professor aprovado com sucesso!");
+        };
+
+        window.rejectTeacher = async function(id) {
+            await window.deleteProfessorCloud(id);
+            showToast("Registro de professor removido.");
+        };
+
+        window.openTeacherEditModal = function(id = '') {
+            const modalTitle = document.getElementById('teacherModalTitle');
+            const editIdInput = document.getElementById('editProfId');
+            const nomeInput = document.getElementById('inputProfNome');
+            const emailInput = document.getElementById('inputProfEmail');
+            const senhaInput = document.getElementById('inputProfSenha');
+            const labelSenha = document.getElementById('labelProfSenha');
+
+            if (id) {
+                const prof = window.appData.professores.find(p => p.id === id);
+                if (!prof) return;
+                modalTitle.innerHTML = `<i class="fa-solid fa-user-pen text-indigo-400"></i> Editar Professor / Senha`;
+                editIdInput.value = prof.id;
+                nomeInput.value = prof.nome;
+                emailInput.value = prof.email;
+                senhaInput.value = prof.senha || '';
+                labelSenha.innerText = prof.resetRequested ? "Nova Senha (Solicitada pelo Professor)" : "Senha de Acesso";
+            } else {
+                modalTitle.innerHTML = `<i class="fa-solid fa-chalkboard-user text-indigo-400"></i> Cadastrar Professor`;
+                editIdInput.value = '';
+                nomeInput.value = '';
+                emailInput.value = '';
+                senhaInput.value = '';
+                labelSenha.innerText = "Senha de Acesso";
+            }
+            document.getElementById('teacherEditModal').classList.remove('hidden');
+        };
+
+        window.closeTeacherEditModal = function() {
+            document.getElementById('teacherEditModal').classList.add('hidden');
+        };
+
+        window.saveTeacherFromAdmin = async function() {
+            const editId = document.getElementById('editProfId').value;
+            const nome = document.getElementById('inputProfNome').value.trim();
+            const email = document.getElementById('inputProfEmail').value.trim();
+            const senha = document.getElementById('inputProfSenha').value.trim();
+
+            if (!nome || !email || !senha) {
+                showToast("Preencha nome, e-mail e senha do professor!", "error");
+                return;
+            }
+
+            const duplicate = window.appData.professores.find(p => p.email.toLowerCase() === email.toLowerCase() && p.id !== editId);
+            if (duplicate) {
+                showToast("Já existe outro professor com este e-mail!", "error");
+                return;
+            }
+
+            if (editId) {
+                const oldProf = window.appData.professores.find(p => p.id === editId);
+                const oldName = oldProf ? oldProf.nome : null;
+
+                await window.saveProfessorCloud({
+                    id: editId,
+                    nome,
+                    email,
+                    senha,
+                    status: 'approved',
+                    resetRequested: false
+                });
+
+                if (oldName && oldName !== nome) {
+                    for (const g of window.appData.grades) {
+                        if (g.professor === oldName) {
+                            await window.saveGradeCloud({ ...g, professor: nome });
+                        }
+                    }
+                    for (const au of window.appData.ausencias) {
+                        if (Array.isArray(au.professores) && au.professores.includes(oldName)) {
+                            const updatedProfs = au.professores.map(pn => pn === oldName ? nome : pn);
+                            await window.saveAusenciaCloud({ ...au, professores: updatedProfs });
+                        }
+                    }
+                }
+                showToast("Dados e senha do professor atualizados!");
+            } else {
+                await window.saveProfessorCloud({
+                    nome,
+                    email,
+                    senha,
+                    status: 'approved',
+                    resetRequested: false
+                });
+                showToast("Professor cadastrado e aprovado!");
+            }
+
+            closeTeacherEditModal();
+        };
+
+        // --- Teacher Auth & Dashboard Render ---
+        window.toggleAuthMode = function() {
+            const mode = window.appData.teacherAuthMode;
+            window.appData.teacherAuthMode = mode === 'login' ? 'register' : 'login';
+            const title = document.getElementById('authModeTitle');
+            const btn = document.getElementById('authSubmitBtn');
+            const link = document.getElementById('authModeToggleLink');
+            const nomeContainer = document.getElementById('fieldNomeContainer');
+
+            if (window.appData.teacherAuthMode === 'register') {
+                title.innerText = "Criar Nova Conta";
+                btn.innerText = "Cadastrar e Aguardar Aprovação";
+                link.innerText = "Já tem conta? Faça login";
+                nomeContainer.classList.remove('hidden');
+            } else {
+                title.innerText = "Acessar com E-mail";
+                btn.innerText = "Entrar no Sistema";
+                link.innerText = "Não tem conta? Cadastre-se";
+                nomeContainer.classList.add('hidden');
+            }
+        };
+
+        window.handleTeacherAuthSubmit = async function() {
+            const email = document.getElementById('authEmail').value.trim();
+            const senha = document.getElementById('authSenha').value.trim();
+            const mode = window.appData.teacherAuthMode;
+
+            if (!email || !senha) {
+                showToast("Preencha o e-mail e a senha!", "error");
+                return;
+            }
+
+            if (mode === 'register') {
+                const nome = document.getElementById('authNome').value.trim();
+                if (!nome) {
+                    showToast("Informe o seu nome completo!", "error");
+                    return;
+                }
+                const existing = window.appData.professores.find(p => p.email.toLowerCase() === email.toLowerCase());
+                if (existing) {
+                    showToast("Este e-mail já está cadastrado!", "error");
+                    return;
+                }
+
+                await window.saveProfessorCloud({
+                    nome,
+                    email,
+                    senha,
+                    status: 'pending',
+                    resetRequested: false
+                });
+
+                showToast("Cadastro realizado! Aguarde a aprovação da coordenação.");
+                document.getElementById('authEmail').value = "";
+                document.getElementById('authSenha').value = "";
+                document.getElementById('authNome').value = "";
+                toggleAuthMode();
+            } else {
+                const teacher = window.appData.professores.find(p => p.email.toLowerCase() === email.toLowerCase() && p.senha === senha);
+                if (!teacher) {
+                    showToast("E-mail ou senha incorretos!", "error");
+                    return;
+                }
+                if (teacher.status !== 'approved') {
+                    showToast("Seu cadastro ainda está aguardando aprovação da coordenação.", "error");
+                    return;
+                }
+
+                window.appData.loggedTeacher = teacher;
+                showToast(`Bem-vindo(a), ${teacher.nome}!`);
+                renderTeacher();
+            }
+        };
+
+        window.teacherLogout = function() {
+            window.appData.loggedTeacher = null;
+            renderTeacher();
+            showToast("Você saiu da sessão.");
+        };
+
+        window.renderTeacher = function() {
+            const authScreen = document.getElementById('teacherAuthScreen');
+            const dashScreen = document.getElementById('teacherDashboardScreen');
+            const logged = window.appData.loggedTeacher;
+
+            if (!logged) {
+                authScreen.classList.remove('hidden');
+                dashScreen.classList.add('hidden');
+            } else {
+                authScreen.classList.add('hidden');
+                dashScreen.classList.remove('hidden');
+                document.getElementById('teacherLoggedNameLabel').innerText = logged.nome;
+                document.getElementById('teacherLoggedEmailLabel').innerText = logged.email;
+
+                const prof = logged.nome;
+                
+                // Teacher Grades
+                const searchGrade = (document.getElementById('searchTeacherGrade')?.value || '').trim().toLowerCase();
+                const filterDia = document.getElementById('filterTeacherGradeDia')?.value || '';
+                const myGrades = window.appData.grades.filter(g => {
+                    if (g.professor !== prof) return false;
+                    const matchSearch = g.turma.toLowerCase().includes(searchGrade) || (g.horario || '').toLowerCase().includes(searchGrade);
+                    const matchDia = !filterDia || (g.dias && g.dias.toLowerCase().includes(filterDia.toLowerCase()));
+                    return matchSearch && matchDia;
+                });
+                document.getElementById('teacherGradeCount').innerText = `${myGrades.length} grade(s)`;
+
+                const gradeList = document.getElementById('teacherGradeList');
+                if (myGrades.length === 0) {
+                    gradeList.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs bg-slate-900/50 rounded-2xl border border-slate-900">Nenhuma grade encontrada.</div>`;
+                } else {
+                    gradeList.innerHTML = myGrades.map(g => `
+                        <div class="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="font-bold text-white text-sm">${g.turma}</span>
+                                <span class="text-[10px] bg-indigo-500/20 text-indigo-300 px-2.5 py-0.5 rounded-full font-semibold">Ativo</span>
+                            </div>
+                            <div class="text-xs text-slate-300 flex flex-wrap items-center gap-3">
+                                <span><i class="fa-solid fa-calendar-days text-indigo-400 mr-1"></i> ${g.dias}</span>
+                                <span><i class="fa-solid fa-clock text-indigo-400 mr-1"></i> ${g.horario}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+
+                // Teacher Ausencias
+                const searchFaltas = (document.getElementById('searchTeacherFaltas')?.value || '').trim().toLowerCase();
+                const myAusencias = window.appData.ausencias.filter(a => {
+                    const isMine = a.professores && Array.isArray(a.professores) && a.professores.includes(prof);
+                    if (!isMine) return false;
+                    const dateBR = formatDateBR(a.data).toLowerCase();
+                    return a.aluno.toLowerCase().includes(searchFaltas) ||
+                           a.turma.toLowerCase().includes(searchFaltas) ||
+                           a.motivo.toLowerCase().includes(searchFaltas) ||
+                           dateBR.includes(searchFaltas);
+                });
+                document.getElementById('teacherAusenciasCount').innerText = `${myAusencias.length} registro(s)`;
+
+                const ausenciasList = document.getElementById('teacherAusenciasList');
+                if (myAusencias.length === 0) {
+                    ausenciasList.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs bg-slate-900/50 rounded-2xl border border-slate-900">Nenhuma ausência encontrada para suas turmas.</div>`;
+                } else {
+                    ausenciasList.innerHTML = myAusencias.map(a => `
+                        <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-2.5">
+                            <div class="flex items-center justify-between">
+                                <span class="font-bold text-white text-xs">${a.aluno}</span>
+                                <span class="text-xs bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2.5 py-1 rounded-lg font-bold">${a.motivo}</span>
+                            </div>
+                            <div class="text-[11px] text-slate-400 flex items-center justify-between">
+                                <span>Turma: <strong class="text-slate-200">${a.turma}</strong></span>
+                                <span>Data: <strong class="text-slate-200">${formatDateBR(a.data)}</strong></span>
+                            </div>
+                            ${a.obs ? `<div class="text-[11px] bg-slate-950 p-2.5 rounded-xl text-slate-300 border border-slate-800">Obs: ${a.obs}</div>` : ''}
+                        </div>
+                    `).join('');
+                }
+
+                // Teacher Calendario
+                const searchCal = (document.getElementById('searchTeacherCal')?.value || '').trim().toLowerCase();
+                const filterCalTipo = document.getElementById('filterTeacherCalTipo')?.value || '';
+                const calItems = window.appData.calendario.filter(c => {
+                    const dateBR = formatDateBR(c.data).toLowerCase();
+                    const matchSearch = c.titulo.toLowerCase().includes(searchCal) ||
+                                        (c.desc || '').toLowerCase().includes(searchCal) ||
+                                        dateBR.includes(searchCal);
+                    const matchTipo = !filterCalTipo || c.tipo === filterCalTipo;
+                    return matchSearch && matchTipo;
+                });
+                document.getElementById('teacherCalCount').innerText = `${calItems.length} item(ns)`;
+
+                const calList = document.getElementById('teacherCalendarioList');
+                if (calItems.length === 0) {
+                    calList.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs bg-slate-900/50 rounded-2xl border border-slate-900">Nenhum evento encontrado no calendário escolar.</div>`;
+                } else {
+                    calList.innerHTML = calItems.map(c => `
+                        <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="font-bold text-white text-xs">${c.titulo}</span>
+                                <span class="text-xs bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2.5 py-0.5 rounded-lg font-bold">${c.tipo}</span>
+                            </div>
+                            <div class="text-[11px] text-slate-400">
+                                Data: <strong class="text-slate-200">${formatDateBR(c.data)}</strong>
+                            </div>
+                            ${c.desc ? `<div class="text-[11px] bg-slate-950 p-2.5 rounded-xl text-slate-300 border border-slate-800">${c.desc}</div>` : ''}
+                        </div>
+                    `).join('');
+                }
+            }
+        };
+
+        // --- Password Management Modals (Teacher) ---
+        window.openChangePasswordModal = function() {
+            document.getElementById('inputNovaSenha').value = "";
+            document.getElementById('inputConfirmaNovaSenha').value = "";
+            document.getElementById('changePasswordModal').classList.remove('hidden');
+        };
+        window.closeChangePasswordModal = function() {
+            document.getElementById('changePasswordModal').classList.add('hidden');
+        };
+        window.submitChangePassword = async function() {
+            const nova = document.getElementById('inputNovaSenha').value.trim();
+            const conf = document.getElementById('inputConfirmaNovaSenha').value.trim();
+            if (!nova || nova.length < 3) {
+                showToast("A senha deve ter pelo menos 3 caracteres!", "error");
+                return;
+            }
+            if (nova !== conf) {
+                showToast("As senhas não coincidem!", "error");
+                return;
+            }
+
+            const logged = window.appData.loggedTeacher;
+            await window.updateProfessorFieldsCloud(logged.id, { senha: nova, resetRequested: false });
+            window.appData.loggedTeacher.senha = nova;
+            closeChangePasswordModal();
+            showToast("Senha atualizada com sucesso!");
+        };
+
+        window.openForgotPasswordModal = function() {
+            document.getElementById('inputForgotEmail').value = "";
+            document.getElementById('forgotPasswordModal').classList.remove('hidden');
+        };
+        window.closeForgotPasswordModal = function() {
+            document.getElementById('forgotPasswordModal').classList.add('hidden');
+        };
+        window.submitForgotPassword = async function() {
+            const email = document.getElementById('inputForgotEmail').value.trim();
+            if (!email) {
+                showToast("Informe o seu e-mail cadastrado!", "error");
+                return;
+            }
+            const prof = window.appData.professores.find(p => p.email.toLowerCase() === email.toLowerCase());
+            if (!prof) {
+                showToast("Nenhum professor encontrado com este e-mail!", "error");
+                return;
+            }
+            await window.updateProfessorFieldsCloud(prof.id, { resetRequested: true });
+            closeForgotPasswordModal();
+            showToast("Solicitação registrada! A Coordenação foi notificada no painel para redefinir sua senha.");
+        };
+
+        // --- Aluno Actions (Create, Edit, Delete) ---
+        window.startEditAluno = function(id) {
+            const aluno = window.appData.alunos.find(a => a.id === id);
+            if (!aluno) return;
+            document.getElementById('editAlunoId').value = aluno.id;
+            document.getElementById('inputNewAlunoNome').value = aluno.nome;
+            document.getElementById('inputNewAlunoTurma').value = aluno.turma;
+            document.getElementById('formAlunoTitle').innerHTML = `<i class="fa-solid fa-user-pen"></i> Editar Aluno`;
+            document.getElementById('btnSubmitAluno').innerText = "Salvar Alterações";
+            document.getElementById('btnCancelEditAluno').classList.remove('hidden');
+            document.getElementById('inputNewAlunoNome').focus();
+        };
+
+        window.cancelEditAluno = function() {
+            document.getElementById('editAlunoId').value = "";
+            document.getElementById('inputNewAlunoNome').value = "";
+            document.getElementById('inputNewAlunoTurma').value = "";
+            document.getElementById('formAlunoTitle').innerHTML = `<i class="fa-solid fa-user-graduate"></i> Cadastrar Aluno`;
+            document.getElementById('btnSubmitAluno').innerText = "Cadastrar Aluno";
+            document.getElementById('btnCancelEditAluno').classList.add('hidden');
+        };
+
+        window.saveAluno = async function() {
+            const editId = document.getElementById('editAlunoId').value;
+            const nome = document.getElementById('inputNewAlunoNome').value.trim();
+            const turma = document.getElementById('inputNewAlunoTurma').value.trim();
+            if (!nome || !turma) {
+                showToast("Preencha o nome e a turma do aluno!", "error");
+                return;
+            }
+            if (editId) {
+                await window.saveAlunoCloud({ id: editId, nome, turma });
+                cancelEditAluno();
+                showToast("Dados do aluno atualizados!");
+            } else {
+                await window.saveAlunoCloud({ nome, turma });
+                document.getElementById('inputNewAlunoNome').value = "";
+                document.getElementById('inputNewAlunoTurma').value = "";
+                showToast("Aluno cadastrado com sucesso!");
+            }
+        };
+
+        window.deleteAluno = async function(id) {
+            if (document.getElementById('editAlunoId').value === id) {
+                cancelEditAluno();
+            }
+            await window.deleteAlunoCloud(id);
+            showToast("Aluno removido!");
+        };
+
+        // --- Grade Modal & Save (Create & Edit) ---
+        window.openGradeModal = function(editId = '') {
+            const select = document.getElementById('inputGradeProf');
+            const approvedProfs = window.appData.professores.filter(p => p.status === 'approved');
+            if (approvedProfs.length === 0) {
+                showToast("Nenhum professor aprovado disponível!", "error");
+                return;
+            }
+            select.innerHTML = approvedProfs.map(p => `<option value="${p.nome}">${p.nome}</option>`).join('');
+            document.querySelectorAll('input[name="diaAula"]').forEach(cb => cb.checked = false);
+
+            const modalTitle = document.getElementById('gradeModalTitle');
+            const editGradeInput = document.getElementById('editGradeId');
+
+            if (editId) {
+                const grade = window.appData.grades.find(g => g.id === editId);
+                if (!grade) return;
+                modalTitle.innerHTML = `<i class="fa-solid fa-pen-to-square text-brand-400"></i> Editar Grade Horária`;
+                editGradeInput.value = grade.id;
+                select.value = grade.professor;
+                document.getElementById('inputTurmaNome').value = grade.turma;
+                document.getElementById('inputHorarioAula').value = grade.horario;
+                const diasArr = (grade.dias || '').split(',').map(s => s.trim());
+                document.querySelectorAll('input[name="diaAula"]').forEach(cb => {
+                    cb.checked = diasArr.includes(cb.value);
+                });
+            } else {
+                modalTitle.innerHTML = `<i class="fa-solid fa-calendar-days text-brand-400"></i> Cadastrar Grade Horária`;
+                editGradeInput.value = '';
+                document.getElementById('inputTurmaNome').value = '';
+                document.getElementById('inputHorarioAula').value = '';
+            }
+
+            document.getElementById('gradeModal').classList.remove('hidden');
+        };
+
+        window.closeGradeModal = function() {
+            document.getElementById('gradeModal').classList.add('hidden');
+        };
+
+        window.saveGrade = async function() {
+            const editId = document.getElementById('editGradeId').value;
+            const professor = document.getElementById('inputGradeProf').value;
+            const turma = document.getElementById('inputTurmaNome').value.trim();
+            const selectedDays = Array.from(document.querySelectorAll('input[name="diaAula"]:checked')).map(cb => cb.value);
+            const dias = selectedDays.join(', ');
+            const horario = document.getElementById('inputHorarioAula').value.trim();
+
+            if (!turma || !horario || selectedDays.length === 0) {
+                showToast("Preencha a turma, horário e selecione pelo menos um dia!", "error");
+                return;
+            }
+
+            await window.saveGradeCloud({ id: editId || undefined, professor, turma, dias, horario });
+            closeGradeModal();
+            showToast(editId ? "Grade atualizada com sucesso!" : "Grade cadastrada com sucesso!");
+        };
+
+        window.deleteGrade = async function(id) {
+            await window.deleteGradeCloud(id);
+            showToast("Grade removida!");
+        };
+
+        // --- Ausencia Modal & Save (Create & Edit) ---
+        window.openAusenciaModal = function(editId = '') {
+            const selectAluno = document.getElementById('selectModalAluno');
+            if (window.appData.alunos.length === 0) {
+                showToast("Cadastre alunos primeiro!", "error");
+                return;
+            }
+            selectAluno.innerHTML = window.appData.alunos.map(a => `<option value="${a.nome}|${a.turma}">${a.nome} (${a.turma})</option>`).join('');
+
+            const modalTitle = document.getElementById('ausenciaModalTitle');
+            const editAusInput = document.getElementById('editAusenciaId');
+
+            if (editId) {
+                const aus = window.appData.ausencias.find(a => a.id === editId);
+                if (!aus) return;
+                modalTitle.innerHTML = `<i class="fa-solid fa-pen-to-square text-rose-400"></i> Editar Falta e Motivo Oficial`;
+                editAusInput.value = aus.id;
+                const optionVal = `${aus.aluno}|${aus.turma}`;
+                if (![...selectAluno.options].some(o => o.value === optionVal)) {
+                    selectAluno.innerHTML += `<option value="${optionVal}">${aus.aluno} (${aus.turma})</option>`;
+                }
+                selectAluno.value = optionVal;
+                document.getElementById('inputDataFalta').value = aus.data;
+                document.getElementById('selectMotivoOficial').value = aus.motivo;
+                document.getElementById('inputObsFalta').value = aus.obs || "";
+            } else {
+                modalTitle.innerHTML = `<i class="fa-solid fa-user-xmark text-rose-400"></i> Lançar Falta e Motivo Oficial`;
+                editAusInput.value = '';
+                document.getElementById('inputDataFalta').value = new Date().toISOString().split('T')[0];
+                document.getElementById('selectMotivoOficial').value = 'ATMED';
+                document.getElementById('inputObsFalta').value = "";
+            }
+
+            document.getElementById('ausenciaModal').classList.remove('hidden');
+        };
+
+        window.closeAusenciaModal = function() {
+            document.getElementById('ausenciaModal').classList.add('hidden');
+        };
+
+        window.saveAusencia = async function() {
+            const editId = document.getElementById('editAusenciaId').value;
+            const alunoData = document.getElementById('selectModalAluno').value;
+            if (!alunoData) {
+                showToast("Selecione um aluno!", "error");
+                return;
+            }
+            const [aluno, turma] = alunoData.split('|');
+            const data = document.getElementById('inputDataFalta').value;
+            const motivo = document.getElementById('selectMotivoOficial').value;
+            const obs = document.getElementById('inputObsFalta').value.trim();
+
+            if (!data) {
+                showToast("Informe a data da falta!", "error");
+                return;
+            }
+
+            const dayName = getDayOfWeekFromDate(data);
+            const matchedGrades = window.appData.grades.filter(g => {
+                const sameTurma = g.turma.toLowerCase().includes(turma.toLowerCase()) || turma.toLowerCase().includes(g.turma.toLowerCase());
+                const matchesDay = g.dias && g.dias.toLowerCase().includes(dayName.toLowerCase());
+                return sameTurma && matchesDay;
+            });
+
+            const professoresNotificados = [...new Set(matchedGrades.map(g => g.professor))];
+
+            await window.saveAusenciaCloud({
+                id: editId || undefined,
+                professores: professoresNotificados,
+                aluno,
+                turma,
+                data,
+                motivo,
+                obs
+            });
+
+            closeAusenciaModal();
+            showToast(`${editId ? 'Falta atualizada' : 'Falta lançada'}! Prof(s): ${professoresNotificados.length > 0 ? professoresNotificados.join(', ') : 'Nenhum na grade para este dia'}`);
+        };
+
+        window.deleteAusencia = async function(id) {
+            await window.deleteAusenciaCloud(id);
+            showToast("Registro removido!");
+        };
+
+        // --- Calendario Escolar (Create, Edit, Delete) ---
+        window.startEditCalendario = function(id) {
+            const item = window.appData.calendario.find(c => c.id === id);
+            if (!item) return;
+            document.getElementById('editCalId').value = item.id;
+            document.getElementById('inputCalTitulo').value = item.titulo;
+            document.getElementById('inputCalData').value = item.data;
+            document.getElementById('inputCalTipo').value = item.tipo;
+            document.getElementById('inputCalDesc').value = item.desc || '';
+            document.getElementById('formCalTitle').innerHTML = `<i class="fa-solid fa-pen-to-square text-base"></i> Editar Item do Calendário`;
+            document.getElementById('btnSubmitCal').innerText = "Salvar Alterações";
+            document.getElementById('btnCancelEditCal').classList.remove('hidden');
+            document.getElementById('inputCalTitulo').focus();
+        };
+
+        window.cancelEditCalendario = function() {
+            document.getElementById('editCalId').value = '';
+            document.getElementById('inputCalTitulo').value = '';
+            document.getElementById('inputCalData').value = '';
+            document.getElementById('inputCalTipo').value = 'Evento';
+            document.getElementById('inputCalDesc').value = '';
+            document.getElementById('formCalTitle').innerHTML = `<i class="fa-solid fa-calendar-days text-base"></i> Calendário Escolar`;
+            document.getElementById('btnSubmitCal').innerText = "Publicar no Calendário";
+            document.getElementById('btnCancelEditCal').classList.add('hidden');
+        };
+
+        window.saveCalendarioItem = async function() {
+            const editId = document.getElementById('editCalId').value;
+            const titulo = document.getElementById('inputCalTitulo').value.trim();
+            const data = document.getElementById('inputCalData').value;
+            const tipo = document.getElementById('inputCalTipo').value;
+            const desc = document.getElementById('inputCalDesc').value.trim();
+
+            if (!titulo || !data) {
+                showToast("Preencha o título e a data do evento!", "error");
+                return;
+            }
+
+            if (editId) {
+                await window.saveCalendarioCloud({ id: editId, titulo, data, tipo, desc });
+                cancelEditCalendario();
+                showToast("Item do calendário atualizado!");
+            } else {
+                await window.saveCalendarioCloud({ titulo, data, tipo, desc });
+                document.getElementById('inputCalTitulo').value = "";
+                document.getElementById('inputCalData').value = "";
+                document.getElementById('inputCalDesc').value = "";
+                showToast("Evento publicado no calendário escolar!");
+            }
+        };
+
+        window.deleteCalendario = async function(id) {
+            if (document.getElementById('editCalId').value === id) {
+                cancelEditCalendario();
+            }
+            await window.deleteCalendarioCloud(id);
+            showToast("Item removido do calendário!");
+        };
+
+        window.showToast = function(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            const toastIcon = document.getElementById('toastIcon');
+            toastMsg.innerText = msg;
+            toastIcon.className = type === 'error'
+                ? "fa-solid fa-triangle-exclamation text-rose-400 shrink-0"
+                : "fa-solid fa-circle-check text-emerald-400 shrink-0";
+            toast.classList.remove('hidden');
+            setTimeout(() => { toast.classList.add('hidden'); }, 3200);
+        };
+
+        // Initial render execution
+        renderCurrentView();
+    </script>
+</body>
+</html>

@@ -1260,7 +1260,7 @@
             const defaultHint = document.getElementById('adminDefaultPassHint');
 
             if (defaultHint) {
-                defaultHint.classList.toggle('hidden', window.appData.adminPassword !== 'admin123');
+                defaultHint.classList.add('hidden');
             }
 
             if (!window.appData.adminLoggedIn) {

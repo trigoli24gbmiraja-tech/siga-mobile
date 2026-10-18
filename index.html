@@ -103,9 +103,9 @@
         <!-- Top Status Bar -->
         <div class="bg-slate-900 px-6 py-2 flex items-center justify-between text-[11px] text-slate-400 font-medium z-30 shrink-0 border-b border-slate-800/60">
             <div class="flex items-center gap-2">
-                <span id="cloudStatusDot" class="w-2 h-2 rounded-full bg-amber-400" title="Modo Local"></span>
+                <span id="cloudStatusDot" class="w-2 h-2 rounded-full bg-amber-400" title="Conectando..."></span>
                 <span class="text-white font-semibold">SIGA Cloud</span>
-                <span id="cloudStatusBadge" class="bg-brand-500/20 text-brand-400 px-1.5 py-0.5 rounded text-[9px] font-bold">v6.0</span>
+                <span id="cloudStatusBadge" class="bg-brand-500/20 text-brand-400 px-1.5 py-0.5 rounded text-[9px] font-bold">Conectando...</span>
             </div>
             <div id="currentTime" class="tabular-nums">09:41</div>
         </div>
@@ -164,15 +164,23 @@
                                 <i class="fa-solid fa-right-to-bracket"></i> Acessar Painel
                             </button>
                         </div>
-                        <div class="pt-2 border-t border-slate-800 text-[11px] text-slate-500 flex items-center justify-between">
-                            <span>Protegido por senha</span>
-                            <span id="adminDefaultPassHint" class="text-slate-400">Senha padrão inicial: <strong class="text-brand-400">admin123</strong></span>
+                        <div class="pt-2 border-t border-slate-800 text-[11px] text-slate-500 flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-lock text-[10px]"></i>
+                            <span>Acesso exclusivo e protegido por senha</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- State B: Admin Logged In Dashboard -->
                 <div id="adminDashboardScreen" class="space-y-4 hidden">
+
+                    <!-- Cloud Warning Banner (shown only if Firestore is not enabled yet) -->
+                    <div id="cloudErrorBanner" class="hidden bg-rose-950/80 border border-rose-500/40 rounded-2xl p-3 text-[11px] text-rose-200 space-y-1">
+                        <div class="font-bold text-rose-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Banco de Dados Firebase (Firestore) Desativado
+                        </div>
+                        <p id="cloudErrorText" class="text-rose-200/90">Ative o Firestore Database em modo de teste no Console do Firebase para sincronizar entre aparelhos.</p>
+                    </div>
 
                     <!-- Admin Session Bar -->
                     <div class="bg-slate-900/90 border border-slate-800 rounded-2xl px-3.5 py-2.5 flex items-center justify-between">
@@ -755,20 +763,21 @@
     <!-- Application Controller Script (Firebase + Multi-Tab LocalSync) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, collection, onSnapshot, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // ============================================================================
-        // CONFIGURAÇÃO DO FIREBASE (COLE AS CREDENCIAIS DO SEU PROJETO FIREBASE AQUI)
+        // CONFIGURAÇÃO DO FIREBASE
         // ============================================================================
         const FIREBASE_PROJECT_CONFIG = { 
-    apiKey: "AIzaSyC1F4p3ZeSEWyaqt-19p5l2uYAKSy8Lrfo",
-    authDomain: "siga-mobile-4cd51.firebaseapp.com",
-    projectId: "siga-mobile-4cd51",
-    storageBucket: "siga-mobile-4cd51.firebasestorage.app",
-    messagingSenderId: "517844107423",
-    appId: "1:517844107423:web:c1161fbf6724333c5d22aa"
-}; 
+            apiKey: "AIzaSyC1F4p3ZeSEWyaqt-19p5l2uYAKSy8Lrfo",
+            authDomain: "siga-mobile-4cd51.firebaseapp.com",
+            projectId: "siga-mobile-4cd51",
+            storageBucket: "siga-mobile-4cd51.firebasestorage.app",
+            messagingSenderId: "517844107423",
+            appId: "1:517844107423:web:c1161fbf6724333c5d22aa"
+        };
+
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'siga-default-app';
         let firebaseConfig = null;
         try {
@@ -784,22 +793,17 @@
         let app = null, db = null, auth = null;
         const statusDot = document.getElementById('cloudStatusDot');
         const statusBadge = document.getElementById('cloudStatusBadge');
+        const cloudErrorBanner = document.getElementById('cloudErrorBanner');
+        const cloudErrorText = document.getElementById('cloudErrorText');
 
         if (firebaseConfig && firebaseConfig.apiKey && firebaseConfig.apiKey !== 'demo') {
             try {
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
-                statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
-                statusDot.title = "Sincronizado com Firebase Cloud";
-                statusBadge.innerText = "Cloud Online";
             } catch(e) {
                 console.warn("Firebase Init Fallback Mode", e);
             }
-        } else {
-            statusDot.className = "w-2 h-2 rounded-full bg-amber-400";
-            statusDot.title = "Armazenamento Local (Configure FIREBASE_PROJECT_CONFIG para sincronizar na nuvem)";
-            statusBadge.innerText = "v6.0";
         }
 
         // Global Application State Data
@@ -866,67 +870,118 @@
             }
         });
 
-        // Initialize Firebase Authentication & Firestore real-time listeners
-        async function initCloudSync() {
-            if (!auth || !db) return;
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
+        // Start Firestore real-time listeners directly (without blocking if Anonymous Auth is not enabled)
+        let listenersStarted = false;
+        function startFirestoreListeners() {
+            if (!db || listenersStarted) return;
+            listenersStarted = true;
+
+            onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'admin_config'), (docSnap) => {
+                if (docSnap.exists() && docSnap.data().adminPassword) {
+                    window.appData.adminPassword = docSnap.data().adminPassword;
+                    localStorage.setItem('siga_admin_pass', window.appData.adminPassword);
+                    renderCurrentView();
                 }
+            }, () => {});
 
-                onAuthStateChanged(auth, (user) => {
-                    if (!user) return;
-                    // Listen to Admin Config (password sync across devices)
-                    onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'admin_config'), (docSnap) => {
-                        if (docSnap.exists() && docSnap.data().adminPassword) {
-                            window.appData.adminPassword = docSnap.data().adminPassword;
-                            localStorage.setItem('siga_admin_pass', window.appData.adminPassword);
-                            renderCurrentView();
-                        }
-                    }, () => {});
+            const collections = ['professores', 'alunos', 'grades', 'ausencias', 'calendario'];
+            collections.forEach(colName => {
+                const colRef = collection(db, 'artifacts', appId, 'public', 'data', colName);
+                onSnapshot(colRef, async (snapshot) => {
+                    statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
+                    statusDot.title = "Sincronizado com Firebase Cloud";
+                    statusBadge.innerText = "Cloud Online";
+                    if (cloudErrorBanner) cloudErrorBanner.classList.add('hidden');
 
-                    const collections = ['professores', 'alunos', 'grades', 'ausencias', 'calendario'];
-                    collections.forEach(colName => {
-                        const colRef = collection(db, 'artifacts', appId, 'public', 'data', colName);
-                        onSnapshot(colRef, (snapshot) => {
-                            const items = [];
-                            snapshot.forEach(docSnap => {
-                                items.push({ id: docSnap.id, ...docSnap.data() });
-                            });
-                            window.appData[colName] = items;
-                            localStorage.setItem('siga_' + colName, JSON.stringify(items));
-                            renderCurrentView();
-                        }, (err) => {
-                            console.warn("Firestore sync error on " + colName, err);
-                        });
+                    const cloudItems = [];
+                    const cloudIds = new Set();
+                    snapshot.forEach(docSnap => {
+                        cloudIds.add(docSnap.id);
+                        cloudItems.push({ ...docSnap.data(), id: docSnap.id });
                     });
+
+                    // If local has unsynced items created while offline, push them to Cloud automatically
+                    const localItems = window.appData[colName] || [];
+                    for (const localItem of localItems) {
+                        if (localItem.id && !localItem.id.includes('_demo') && !cloudIds.has(localItem.id) && localItem._unsynced) {
+                            try {
+                                const cleanItem = { ...localItem };
+                                delete cleanItem._unsynced;
+                                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', colName, localItem.id), cleanItem);
+                                cloudItems.push(cleanItem);
+                            } catch(e) { console.warn(e); }
+                        }
+                    }
+
+                    if (cloudItems.length > 0 || !snapshot.metadata.fromCache) {
+                        window.appData[colName] = cloudItems;
+                        localStorage.setItem('siga_' + colName, JSON.stringify(cloudItems));
+                        renderCurrentView();
+                    }
+                }, (err) => {
+                    console.warn("Firestore sync error on " + colName, err);
+                    statusDot.className = "w-2 h-2 rounded-full bg-rose-500";
+                    statusDot.title = "Erro de conexão com Firestore: " + (err.message || err.code);
+                    statusBadge.innerText = "Modo Local";
+                    if (cloudErrorBanner) {
+                        cloudErrorBanner.classList.remove('hidden');
+                        if (err.code === 'permission-denied') {
+                            cloudErrorText.innerText = "No Console do Firebase (projeto siga-mobile-4cd51), clique em 'Firestore Database' -> 'Criar banco de dados' -> selecione 'Iniciar no modo de teste' (ou libere as Rules para allow read, write: if true;).";
+                        }
+                    }
                 });
-            } catch(e) {
-                console.warn("Cloud auth warning", e);
+            });
+        }
+
+        async function initCloudSync() {
+            if (!db) {
+                statusDot.className = "w-2 h-2 rounded-full bg-amber-400";
+                statusBadge.innerText = "Modo Local";
+                return;
             }
+            // Try optional anonymous auth, but ALWAYS start Firestore listeners regardless
+            if (auth) {
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch(e) {
+                    console.info("prosseguindo sem auth anônimo (usando regras públicas do Firestore):", e.code || e.message);
+                }
+            }
+            startFirestoreListeners();
         }
         initCloudSync();
 
         // Cloud / Local Action Handlers
         window.saveProfessorCloud = async function(profObj) {
-            const id = profObj.id || ('p_' + Date.now());
+            const cleanObj = { ...profObj };
+            const id = cleanObj.id || ('p_' + Date.now());
+            delete cleanObj.id;
+
             const existingIdx = window.appData.professores.findIndex(item => item.id === id);
             let record;
             if (existingIdx >= 0) {
-                record = { ...window.appData.professores[existingIdx], ...profObj, id };
+                record = { ...window.appData.professores[existingIdx], ...cleanObj, id };
                 window.appData.professores[existingIdx] = record;
             } else {
-                record = { id, status: 'pending', resetRequested: false, ...profObj, createdAt: Date.now() };
+                record = { status: 'pending', resetRequested: false, ...cleanObj, id, createdAt: Date.now(), _unsynced: true };
                 window.appData.professores.push(record);
             }
             persistData('professores');
 
             if (db) {
                 try {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'professores', id), record);
-                } catch(e) { console.warn(e); }
+                    const cloudRecord = { ...record };
+                    delete cloudRecord._unsynced;
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'professores', id), cloudRecord);
+                    delete record._unsynced;
+                    persistData('professores');
+                } catch(e) {
+                    console.warn("Erro ao salvar professor no Firestore:", e);
+                }
             }
         };
 
@@ -938,7 +993,15 @@
             if (db) {
                 try {
                     await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'professores', id), fields);
-                } catch(e) { console.warn(e); }
+                } catch(e) {
+                    try {
+                        if (p) {
+                            const cleanRecord = { ...p };
+                            delete cleanRecord._unsynced;
+                            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'professores', id), cleanRecord);
+                        }
+                    } catch(e2) { console.warn(e2); }
+                }
             }
         };
 
@@ -954,21 +1017,28 @@
         };
 
         window.saveAlunoCloud = async function(alunoObj) {
-            const id = alunoObj.id || ('a_' + Date.now());
+            const cleanObj = { ...alunoObj };
+            const id = cleanObj.id || ('a_' + Date.now());
+            delete cleanObj.id;
+
             const existingIdx = window.appData.alunos.findIndex(item => item.id === id);
             let record;
             if (existingIdx >= 0) {
-                record = { ...window.appData.alunos[existingIdx], ...alunoObj, id };
+                record = { ...window.appData.alunos[existingIdx], ...cleanObj, id };
                 window.appData.alunos[existingIdx] = record;
             } else {
-                record = { id, ...alunoObj, createdAt: Date.now() };
+                record = { ...cleanObj, id, createdAt: Date.now(), _unsynced: true };
                 window.appData.alunos.push(record);
             }
             persistData('alunos');
 
             if (db) {
                 try {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'alunos', id), record);
+                    const cloudRecord = { ...record };
+                    delete cloudRecord._unsynced;
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'alunos', id), cloudRecord);
+                    delete record._unsynced;
+                    persistData('alunos');
                 } catch(e) { console.warn(e); }
             }
         };
@@ -985,21 +1055,28 @@
         };
 
         window.saveGradeCloud = async function(gradeObj) {
-            const id = gradeObj.id || ('g_' + Date.now());
+            const cleanObj = { ...gradeObj };
+            const id = cleanObj.id || ('g_' + Date.now());
+            delete cleanObj.id;
+
             const existingIdx = window.appData.grades.findIndex(item => item.id === id);
             let record;
             if (existingIdx >= 0) {
-                record = { ...window.appData.grades[existingIdx], ...gradeObj, id };
+                record = { ...window.appData.grades[existingIdx], ...cleanObj, id };
                 window.appData.grades[existingIdx] = record;
             } else {
-                record = { id, ...gradeObj, createdAt: Date.now() };
+                record = { ...cleanObj, id, createdAt: Date.now(), _unsynced: true };
                 window.appData.grades.push(record);
             }
             persistData('grades');
 
             if (db) {
                 try {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'grades', id), record);
+                    const cloudRecord = { ...record };
+                    delete cloudRecord._unsynced;
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'grades', id), cloudRecord);
+                    delete record._unsynced;
+                    persistData('grades');
                 } catch(e) { console.warn(e); }
             }
         };
@@ -1016,21 +1093,28 @@
         };
 
         window.saveAusenciaCloud = async function(ausenciaObj) {
-            const id = ausenciaObj.id || ('au_' + Date.now());
+            const cleanObj = { ...ausenciaObj };
+            const id = cleanObj.id || ('au_' + Date.now());
+            delete cleanObj.id;
+
             const existingIdx = window.appData.ausencias.findIndex(item => item.id === id);
             let record;
             if (existingIdx >= 0) {
-                record = { ...window.appData.ausencias[existingIdx], ...ausenciaObj, id };
+                record = { ...window.appData.ausencias[existingIdx], ...cleanObj, id };
                 window.appData.ausencias[existingIdx] = record;
             } else {
-                record = { id, ...ausenciaObj, createdAt: Date.now() };
+                record = { ...cleanObj, id, createdAt: Date.now(), _unsynced: true };
                 window.appData.ausencias.push(record);
             }
             persistData('ausencias');
 
             if (db) {
                 try {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'ausencias', id), record);
+                    const cloudRecord = { ...record };
+                    delete cloudRecord._unsynced;
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'ausencias', id), cloudRecord);
+                    delete record._unsynced;
+                    persistData('ausencias');
                 } catch(e) { console.warn(e); }
             }
         };
@@ -1047,21 +1131,28 @@
         };
 
         window.saveCalendarioCloud = async function(calObj) {
-            const id = calObj.id || ('c_' + Date.now());
+            const cleanObj = { ...calObj };
+            const id = cleanObj.id || ('c_' + Date.now());
+            delete cleanObj.id;
+
             const existingIdx = window.appData.calendario.findIndex(item => item.id === id);
             let record;
             if (existingIdx >= 0) {
-                record = { ...window.appData.calendario[existingIdx], ...calObj, id };
+                record = { ...window.appData.calendario[existingIdx], ...cleanObj, id };
                 window.appData.calendario[existingIdx] = record;
             } else {
-                record = { id, ...calObj, createdAt: Date.now() };
+                record = { ...cleanObj, id, createdAt: Date.now(), _unsynced: true };
                 window.appData.calendario.push(record);
             }
             persistData('calendario');
 
             if (db) {
                 try {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'calendario', id), record);
+                    const cloudRecord = { ...record };
+                    delete cloudRecord._unsynced;
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'calendario', id), cloudRecord);
+                    delete record._unsynced;
+                    persistData('calendario');
                 } catch(e) { console.warn(e); }
             }
         };
@@ -1256,11 +1347,6 @@
         window.renderAdmin = function() {
             const authScreen = document.getElementById('adminAuthScreen');
             const dashScreen = document.getElementById('adminDashboardScreen');
-            const defaultHint = document.getElementById('adminDefaultPassHint');
-
-            if (defaultHint) {
-                defaultHint.classList.add('hidden');
-            }
 
             if (!window.appData.adminLoggedIn) {
                 authScreen.classList.remove('hidden');
@@ -1654,7 +1740,17 @@
                 }
                 const existing = window.appData.professores.find(p => p.email.toLowerCase() === email.toLowerCase());
                 if (existing) {
-                    showToast("Este e-mail já está cadastrado!", "error");
+                    if (existing.status === 'pending') {
+                        // Re-sync pending professor to cloud if needed
+                        await window.saveProfessorCloud(existing);
+                        showToast("Seu cadastro já foi enviado e está aguardando aprovação da coordenação!");
+                        document.getElementById('authEmail').value = "";
+                        document.getElementById('authSenha').value = "";
+                        document.getElementById('authNome').value = "";
+                        toggleAuthMode();
+                        return;
+                    }
+                    showToast("Este e-mail já está aprovado! Faça login na tela de entrada.", "error");
                     return;
                 }
 
@@ -1958,7 +2054,9 @@
                 return;
             }
 
-            await window.saveGradeCloud({ id: editId || undefined, professor, turma, dias, horario });
+            const payload = { professor, turma, dias, horario };
+            if (editId) payload.id = editId;
+            await window.saveGradeCloud(payload);
             closeGradeModal();
             showToast(editId ? "Grade atualizada com sucesso!" : "Grade cadastrada com sucesso!");
         };
@@ -2034,15 +2132,16 @@
 
             const professoresNotificados = [...new Set(matchedGrades.map(g => g.professor))];
 
-            await window.saveAusenciaCloud({
-                id: editId || undefined,
+            const payload = {
                 professores: professoresNotificados,
                 aluno,
                 turma,
                 data,
                 motivo,
                 obs
-            });
+            };
+            if (editId) payload.id = editId;
+            await window.saveAusenciaCloud(payload);
 
             closeAusenciaModal();
             showToast(`${editId ? 'Falta atualizada' : 'Falta lançada'}! Prof(s): ${professoresNotificados.length > 0 ? professoresNotificados.join(', ') : 'Nenhum na grade para este dia'}`);
